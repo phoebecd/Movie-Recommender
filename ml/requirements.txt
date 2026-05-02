@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+scikit-learn
+pandas
+numpy
+sentence-transformers
+firebase-admin
+python-dotenv
+joblib
+httpx
+nltk

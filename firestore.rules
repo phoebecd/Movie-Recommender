@@ -1,0 +1,74 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper: is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: is owner
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // 1. Movies collection: Read-only for all auth users
+    match /movies/{movieId} {
+      allow read: if isAuth();
+      allow write: if false; // Only via seeder/admin
+    }
+
+    // 2. Users collection and subcollections
+    match /users/{userId} {
+      allow read: if isAuth(); // Allow profile discovery
+      allow write: if isOwner(userId);
+      
+      // Profile data
+      match /profile/data {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Watched history
+      match /watched/{movieId} {
+        allow read: if isAuth(); // Friends might want to see what you watched
+        allow write: if isOwner(userId);
+      }
+      
+      // Watch Later
+      match /watchLater/{movieId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Favorites
+      match /favorites/{movieId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Friends
+      match /friends/{friendId} {
+        // Any auth user can write a friend request
+        allow write: if isAuth(); 
+        // Only involved parties can read
+        allow read: if isOwner(userId) || isOwner(friendId);
+      }
+
+      // Stats
+      match /stats/data {
+        allow read: if isAuth();
+        allow write: if false; // Only via Cloud Functions trigger
+      }
+      
+      // Recommendation Cache
+      match /recommendationCache/latest {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // 3. Usernames registry (for uniqueness check)
+    match /usernames/{username} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update, delete: if false;
+    }
+  }
+}
