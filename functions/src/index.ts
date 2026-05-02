@@ -7,7 +7,7 @@ import axios from 'axios';
 admin.initializeApp();
 const db = admin.firestore();
 
-const FASTAPI_URL = process.env.FASTAPI_URL || 'http://localhost:8000';
+const FASTAPI_URL = process.env.FASTAPI_URL || 'http://127.0.0.1:8000';
 const FASTAPI_SECRET = process.env.FASTAPI_SECRET || 'your-shared-secret';
 
 // Helper to check auth

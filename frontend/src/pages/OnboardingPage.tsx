@@ -149,8 +149,16 @@ export default function OnboardingPage() {
         } 
       })
       await updateDoc(doc(db, 'users', user.uid), { firstLogin: false })
-      navigate('/', { replace: true })
-    } catch {
+      
+      // Update local state so AuthGuard doesn't redirect back
+      useAuthStore.getState().setFirestoreUser({
+        ...(useAuthStore.getState().firestoreUser || {}),
+        firstLogin: false
+      } as any)
+
+      navigate('/home', { replace: true })
+    } catch (err) {
+      console.error('Onboarding Error:', err)
       toast.error('Failed to save preferences — please try again')
     } finally {
       setSubmitting(false)
