@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineTrack – Daily Recommendation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===== NAVIGATION ===== -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-icon">🎬</span>
+      <span class="logo-text">Cine<span>Track</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">🎥 <span>Watched</span></a></li>
+      <li><a href="watchlist.html">📋 <span>Watchlist</span></a></li>
+      <li><a href="recommend.html" class="active">✨ <span>Recommend</span></a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main class="main-content">
+
+  <!-- Hero -->
+  <div class="recommend-hero">
+    <h1>What Should I Watch <span>Today?</span></h1>
+    <p>Tell us about your evening and we'll find the perfect movie for you.</p>
+  </div>
+
+  <!-- Preferences Card -->
+  <div class="preference-card">
+
+    <!-- Genre -->
+    <div class="preference-section">
+      <h3>🎭 Genre Preference</h3>
+      <div class="chips-group" id="genreChips">
+        <button class="chip selected" data-value="any">🎲 Any</button>
+        <button class="chip" data-value="Action">💥 Action</button>
+        <button class="chip" data-value="Animation">🎨 Animation</button>
+        <button class="chip" data-value="Comedy">😂 Comedy</button>
+        <button class="chip" data-value="Documentary">🎙 Documentary</button>
+        <button class="chip" data-value="Drama">🎭 Drama</button>
+        <button class="chip" data-value="Horror">👻 Horror</button>
+        <button class="chip" data-value="Mystery">🔍 Mystery</button>
+        <button class="chip" data-value="Romance">💕 Romance</button>
+        <button class="chip" data-value="Sci-Fi">🚀 Sci-Fi</button>
+        <button class="chip" data-value="Thriller">🔪 Thriller</button>
+      </div>
+    </div>
+
+    <!-- Runtime -->
+    <div class="preference-section">
+      <h3>⏱ How Much Time Do You Have?</h3>
+      <div class="runtime-group">
+        <button class="runtime-card" data-value="short">
+          <span class="runtime-icon">⚡</span>
+          <strong>Quick Watch</strong>
+          <span>Under 90 min</span>
+        </button>
+        <button class="runtime-card" data-value="medium">
+          <span class="runtime-icon">☕</span>
+          <strong>Standard</strong>
+          <span>90 – 120 min</span>
+        </button>
+        <button class="runtime-card" data-value="long">
+          <span class="runtime-icon">🍿</span>
+          <strong>Epic Sit-Down</strong>
+          <span>Over 2 hours</span>
+        </button>
+        <button class="runtime-card selected" data-value="any">
+          <span class="runtime-icon">🕐</span>
+          <strong>Any Length</strong>
+          <span>No preference</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Audience -->
+    <div class="preference-section">
+      <h3>👥 Who Are You Watching With?</h3>
+      <div class="audience-group">
+        <button class="audience-card selected" data-value="any">
+          <span class="audience-icon">👐</span>
+          Anyone
+        </button>
+        <button class="audience-card" data-value="solo">
+          <span class="audience-icon">🧘</span>
+          Just Me
+        </button>
+        <button class="audience-card" data-value="couple">
+          <span class="audience-icon">💑</span>
+          Partner / Date
+        </button>
+        <button class="audience-card" data-value="family">
+          <span class="audience-icon">👨‍👩‍👧‍👦</span>
+          Family
+        </button>
+        <button class="audience-card" data-value="friends">
+          <span class="audience-icon">🎉</span>
+          Friends
+        </button>
+      </div>
+    </div>
+
+    <!-- Mood / Life Context -->
+    <div class="preference-section">
+      <h3>🌟 Current Mood / What Do You Need?</h3>
+      <div class="mood-group">
+        <button class="mood-chip selected" data-value="any">
+          <span class="mood-emoji">🎲</span>
+          Surprise Me
+        </button>
+        <button class="mood-chip" data-value="funny">
+          <span class="mood-emoji">😂</span>
+          Need a Laugh
+        </button>
+        <button class="mood-chip" data-value="inspiring">
+          <span class="mood-emoji">✨</span>
+          Feel Inspired
+        </button>
+        <button class="mood-chip" data-value="thrilling">
+          <span class="mood-emoji">😱</span>
+          Thrill Me
+        </button>
+        <button class="mood-chip" data-value="romantic">
+          <span class="mood-emoji">💕</span>
+          Romance Mode
+        </button>
+        <button class="mood-chip" data-value="emotional">
+          <span class="mood-emoji">😢</span>
+          Okay to Cry
+        </button>
+        <button class="mood-chip" data-value="relaxing">
+          <span class="mood-emoji">😌</span>
+          Just Relax
+        </button>
+        <button class="mood-chip" data-value="thought-provoking">
+          <span class="mood-emoji">🤔</span>
+          Make Me Think
+        </button>
+        <button class="mood-chip" data-value="feel-good">
+          <span class="mood-emoji">☀️</span>
+          Feel-Good Vibes
+        </button>
+        <button class="mood-chip" data-value="energizing">
+          <span class="mood-emoji">⚡</span>
+          Get Pumped
+        </button>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:flex;gap:1rem;justify-content:center;margin-top:2rem;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-lg" onclick="getRecommendation()">
+        ✨ Find My Movie
+      </button>
+      <button class="btn btn-secondary btn-lg" onclick="surpriseMe()">
+        🎲 Surprise Me!
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== RESULT SECTION ===== -->
+  <div class="result-section" id="resultSection">
+    <div class="result-header">
+      <h2>🎬 Tonight's Pick</h2>
+      <p id="resultSubtitle">Based on your preferences</p>
+    </div>
+
+    <!-- Main recommendation -->
+    <div class="result-main-card" id="mainCard">
+      <div class="result-poster" id="mainPoster"></div>
+      <div class="result-details">
+        <div class="result-title" id="mainTitle"></div>
+        <div class="result-meta"  id="mainMeta"></div>
+        <div class="result-why"   id="mainWhy"></div>
+        <div class="result-review" id="mainReview"></div>
+        <div class="result-actions">
+          <button class="btn btn-primary" onclick="addResultToWatchlist()">📋 Add to Watchlist</button>
+          <button class="btn btn-secondary" onclick="skipRecommendation()">⏭ Different Pick</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alternatives -->
+    <div class="alternatives-section" id="altSection" style="display:none">
+      <h3>🎞 Other Options You Might Like</h3>
+      <div class="alternatives-grid" id="altGrid"></div>
+    </div>
+
+    <!-- Try again -->
+    <div style="text-align:center;margin-top:2rem;">
+      <button class="btn btn-outline btn-lg" onclick="getRecommendation()">🔄 Get Another Recommendation</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon"></span>
+  <span class="toast-msg"  id="toastMsg"></span>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// SEED DATABASE — 35 curated films
+// Fields: id, title, year, genre, runtime (min),
+//         director, audience[], mood[], review
+// ─────────────────────────────────────────────
+const SEED_MOVIES = [
+  { id:'s01', title:'The Dark Knight', year:2008, genre:'Action', runtime:152, director:'Christopher Nolan',
+    audience:['solo','friends'], mood:['thrilling','thought-provoking'],
+    review:"Heath Ledger's Joker is one of cinema's greatest characters. Dark, complex, and riveting from start to finish." },
+
+  { id:'s02', title:'Mad Max: Fury Road', year:2015, genre:'Action', runtime:120, director:'George Miller',
+    audience:['solo','friends'], mood:['thrilling','energizing'],
+    review:"Possibly the greatest action film ever made — non-stop adrenaline with a surprisingly deep message about freedom." },
+
+  { id:'s03', title:'John Wick', year:2014, genre:'Action', runtime:101, director:'Chad Stahelski',
+    audience:['solo','friends'], mood:['thrilling','energizing'],
+    review:"Slick, stylish action with impeccable choreography. Keanu Reeves is magnetic." },
+
+  { id:'s04', title:'Die Hard', year:1988, genre:'Action', runtime:132, director:'John McTiernan',
+    audience:['solo','friends'], mood:['thrilling','funny','energizing'],
+    review:"The definitive action movie. Bruce Willis is iconic as John McClane. Pure popcorn perfection." },
+
+  { id:'s05', title:'Knives Out', year:2019, genre:'Mystery', runtime:130, director:'Rian Johnson',
+    audience:['solo','couple','family','friends'], mood:['funny','thrilling','thought-provoking'],
+    review:"A brilliant modern whodunit with sharp wit and clever twists. Perfect for a crowd." },
+
+  { id:'s06', title:'The Princess Bride', year:1987, genre:'Comedy', runtime:98, director:'Rob Reiner',
+    audience:['solo','couple','family','friends'], mood:['funny','romantic','feel-good'],
+    review:"Timeless, witty, and utterly charming. Perfect for any audience. As you wish." },
+
+  { id:'s07', title:'Superbad', year:2007, genre:'Comedy', runtime:113, director:'Greg Mottola',
+    audience:['solo','friends'], mood:['funny','feel-good'],
+    review:"Hilarious and surprisingly heartfelt. One of the best coming-of-age comedies ever made." },
+
+  { id:'s08', title:'The Grand Budapest Hotel', year:2014, genre:'Comedy', runtime:99, director:'Wes Anderson',
+    audience:['solo','couple','friends'], mood:['funny','thought-provoking'],
+    review:"Visually stunning and endlessly inventive. Wes Anderson at his most delightful." },
+
+  { id:'s09', title:'Paddington 2', year:2017, genre:'Comedy', runtime:103, director:'Paul King',
+    audience:['solo','couple','family','friends'], mood:['feel-good','funny','inspiring'],
+    review:"Pure joy in film form — funny, warm-hearted, and genuinely touching. Perfect for every age." },
+
+  { id:'s10', title:'The Shawshank Redemption', year:1994, genre:'Drama', runtime:142, director:'Frank Darabont',
+    audience:['solo','couple','friends'], mood:['inspiring','emotional','thought-provoking'],
+    review:"One of the greatest films ever made. A powerful story about hope, friendship, and perseverance." },
+
+  { id:'s11', title:'Forrest Gump', year:1994, genre:'Drama', runtime:142, director:'Robert Zemeckis',
+    audience:['solo','couple','family','friends'], mood:['emotional','inspiring','feel-good'],
+    review:"Touching, funny, and utterly unique. Tom Hanks delivers one of cinema's most beloved performances." },
+
+  { id:'s12', title:'Whiplash', year:2014, genre:'Drama', runtime:107, director:'Damien Chazelle',
+    audience:['solo','couple','friends'], mood:['thrilling','inspiring','thought-provoking'],
+    review:"An intense, adrenaline-fueled drama about ambition. J.K. Simmons is terrifyingly great." },
+
+  { id:'s13', title:'Good Will Hunting', year:1997, genre:'Drama', runtime:126, director:'Gus Van Sant',
+    audience:['solo','couple','friends'], mood:['inspiring','emotional','thought-provoking'],
+    review:"A deeply moving story about potential and trauma. The scenes between Damon and Williams are exceptional." },
+
+  { id:'s14', title:'The Truman Show', year:1998, genre:'Drama', runtime:103, director:'Peter Weir',
+    audience:['solo','couple','friends'], mood:['thought-provoking','emotional','inspiring'],
+    review:"Jim Carrey's finest work. A prescient, haunting film about reality, media, and identity." },
+
+  { id:'s15', title:'Parasite', year:2019, genre:'Thriller', runtime:132, director:'Bong Joon-ho',
+    audience:['solo','couple','friends'], mood:['thrilling','thought-provoking','emotional'],
+    review:"A genre-defying masterpiece that shifts tone brilliantly. One of cinema's most shocking third acts." },
+
+  { id:'s16', title:'Gone Girl', year:2014, genre:'Thriller', runtime:149, director:'David Fincher',
+    audience:['solo','couple','friends'], mood:['thrilling','thought-provoking'],
+    review:"David Fincher's razor-sharp thriller is endlessly compelling. Rosamund Pike is terrifyingly brilliant." },
+
+  { id:'s17', title:'Get Out', year:2017, genre:'Horror', runtime:104, director:'Jordan Peele',
+    audience:['solo','friends'], mood:['thrilling','thought-provoking'],
+    review:"Jordan Peele's debut is terrifying, hilarious, and deeply relevant. Essential modern horror." },
+
+  { id:'s18', title:'A Quiet Place', year:2018, genre:'Horror', runtime:90, director:'John Krasinski',
+    audience:['solo','couple','friends'], mood:['thrilling','emotional'],
+    review:"Brilliantly tense and surprisingly emotional. Uses silence as a masterful storytelling device." },
+
+  { id:'s19', title:'Hereditary', year:2018, genre:'Horror', runtime:127, director:'Ari Aster',
+    audience:['solo','friends'], mood:['thrilling','emotional'],
+    review:"A masterclass in slow-burn dread and family trauma. The most terrifying film in years." },
+
+  { id:'s20', title:'Interstellar', year:2014, genre:'Sci-Fi', runtime:169, director:'Christopher Nolan',
+    audience:['solo','couple','friends'], mood:['thought-provoking','inspiring','emotional'],
+    review:"An ambitious, visually stunning space epic with a surprisingly powerful emotional core." },
+
+  { id:'s21', title:'Arrival', year:2016, genre:'Sci-Fi', runtime:116, director:'Denis Villeneuve',
+    audience:['solo','couple','friends'], mood:['thought-provoking','emotional','thrilling'],
+    review:"A slow-burn sci-fi masterpiece about language, time, and love. Amy Adams is extraordinary." },
+
+  { id:'s22', title:'The Martian', year:2015, genre:'Sci-Fi', runtime:144, director:'Ridley Scott',
+    audience:['solo','couple','family','friends'], mood:['inspiring','funny','thrilling'],
+    review:"Smart, funny, and thrilling. Matt Damon is charming as an astronaut who must science his way to survival." },
+
+  { id:'s23', title:'Ex Machina', year:2015, genre:'Sci-Fi', runtime:108, director:'Alex Garland',
+    audience:['solo','couple','friends'], mood:['thought-provoking','thrilling'],
+    review:"A minimalist, intellectually rich sci-fi thriller about AI consciousness. Alicia Vikander is mesmerizing." },
+
+  { id:'s24', title:'Spirited Away', year:2001, genre:'Animation', runtime:125, director:'Hayao Miyazaki',
+    audience:['solo','couple','family','friends'], mood:['inspiring','feel-good','thought-provoking'],
+    review:"A transcendent animated masterpiece. Miyazaki's boundless imagination resonates at every age." },
+
+  { id:'s25', title:'Spider-Man: Into the Spider-Verse', year:2018, genre:'Animation', runtime:117, director:'Bob Persichetti',
+    audience:['solo','couple','family','friends'], mood:['inspiring','feel-good','funny'],
+    review:"The most visually innovative animated film ever made. An absolute joy from start to finish." },
+
+  { id:'s26', title:'Coco', year:2017, genre:'Animation', runtime:105, director:'Lee Unkrich',
+    audience:['solo','couple','family','friends'], mood:['emotional','inspiring','feel-good'],
+    review:"Pixar at its finest — joyful, colourful, and absolutely devastating. Bring tissues." },
+
+  { id:'s27', title:'WALL-E', year:2008, genre:'Animation', runtime:98, director:'Andrew Stanton',
+    audience:['solo','couple','family','friends'], mood:['feel-good','emotional','thought-provoking'],
+    review:"Nearly wordless in its first half yet utterly magical. A love story unlike any other." },
+
+  { id:'s28', title:'Inside Out', year:2015, genre:'Animation', runtime:95, director:'Pete Docter',
+    audience:['solo','couple','family','friends'], mood:['emotional','feel-good','thought-provoking'],
+    review:"Pixar's most emotionally intelligent film. Teaches children and adults how to process complex feelings." },
+
+  { id:'s29', title:'Before Sunrise', year:1995, genre:'Romance', runtime:101, director:'Richard Linklater',
+    audience:['solo','couple'], mood:['romantic','thought-provoking','feel-good'],
+    review:"Two strangers talking in Vienna. Simple, but one of the most romantic and intellectually stimulating films ever made." },
+
+  { id:'s30', title:'La La Land', year:2016, genre:'Romance', runtime:128, director:'Damien Chazelle',
+    audience:['solo','couple','friends'], mood:['romantic','inspiring','emotional'],
+    review:"A bittersweet love letter to dreamers and Los Angeles. Gorgeous music, standout performances." },
+
+  { id:'s31', title:'About Time', year:2013, genre:'Romance', runtime:123, director:'Richard Curtis',
+    audience:['solo','couple','family'], mood:['romantic','emotional','feel-good'],
+    review:"A beautiful film about appreciating everyday moments. Sweet, funny, and deeply moving." },
+
+  { id:'s32', title:'Eternal Sunshine of the Spotless Mind', year:2004, genre:'Romance', runtime:108, director:'Michel Gondry',
+    audience:['solo','couple'], mood:['emotional','thought-provoking','romantic'],
+    review:"Structurally inventive and deeply emotional. Jim Carrey in his finest dramatic role." },
+
+  { id:'s33', title:'Free Solo', year:2018, genre:'Documentary', runtime:100, director:'Elizabeth Chai Vasarhelyi',
+    audience:['solo','couple','friends'], mood:['inspiring','thrilling','thought-provoking'],
+    review:"Jaw-dropping filmmaking. Watching Alex Honnold climb El Capitan without ropes is simultaneously terrifying and awe-inspiring." },
+
+  { id:'s34', title:'Jiro Dreams of Sushi', year:2011, genre:'Documentary', runtime:81, director:'David Gelb',
+    audience:['solo','couple','friends'], mood:['inspiring','thought-provoking','relaxing'],
+    review:"A meditative portrait of mastery and dedication. Beautiful cinematography and a compelling story of artistic perfection." },
+
+  { id:'s35', title:'Princess Mononoke', year:1997, genre:'Animation', runtime:134, director:'Hayao Miyazaki',
+    audience:['solo','couple','friends'], mood:['inspiring','thought-provoking','emotional'],
+    review:"Miyazaki's breathtaking epic — a nuanced, morally ambiguous tale about humanity's relationship with nature." },
+];
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let currentResult  = null;   // main recommendation
+let allResults     = [];     // full scored list for skip/alternatives
+let skipCount      = 0;      // how many times user has skipped
+
+// ─────────────────────────────────────────────
+// PREFERENCES
+// ─────────────────────────────────────────────
+function setupSingleSelect(containerSelector) {
+  document.querySelectorAll(containerSelector).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(containerSelector).forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+}
+
+// Genre chips — single select
+document.querySelectorAll('#genreChips .chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#genreChips .chip').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+setupSingleSelect('.runtime-card');
+setupSingleSelect('.audience-card');
+setupSingleSelect('.mood-chip');
+
+function getPrefs() {
+  const sel = (q) => document.querySelector(q + '.selected');
+  return {
+    genre:    (sel('#genreChips .chip')  || {}).dataset?.value || 'any',
+    runtime:  (sel('.runtime-card')      || {}).dataset?.value || 'any',
+    audience: (sel('.audience-card')     || {}).dataset?.value || 'any',
+    mood:     (sel('.mood-chip')         || {}).dataset?.value || 'any',
+  };
+}
+
+// ─────────────────────────────────────────────
+// RECOMMENDATION ALGORITHM
+// ─────────────────────────────────────────────
+function scoreMovie(movie, prefs) {
+  let score = 0;
+
+  // Genre
+  if (prefs.genre === 'any' || (movie.genre && movie.genre === prefs.genre)) score += 30;
+
+  // Runtime
+  const rt = movie.runtime;
+  if (prefs.runtime === 'any')                                  score += 20;
+  else if (prefs.runtime === 'short'  && rt && rt < 90)        score += 20;
+  else if (prefs.runtime === 'medium' && rt && rt >= 90 && rt <= 120) score += 20;
+  else if (prefs.runtime === 'long'   && rt && rt > 120)       score += 20;
+
+  // Audience
+  const aud = movie.audience || [];
+  if (prefs.audience === 'any' || aud.includes(prefs.audience)) score += 25;
+
+  // Mood
+  const mood = movie.mood || [];
+  if (prefs.mood === 'any' || mood.includes(prefs.mood)) score += 25;
+
+  // Bonus for watchlist movies (user curated)
+  if (movie.fromWatchlist) score += 15;
+
+  // Add small random jitter for variety
+  score += Math.random() * 5;
+
+  return score;
+}
+
+function buildCandidates(prefs) {
+  const WATCHLIST_KEY = 'cinetrack_watchlist';
+  const WATCHED_KEY   = 'cinetrack_watched';
+
+  const watchlist = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]');
+  const watched   = JSON.parse(localStorage.getItem(WATCHED_KEY)   || '[]');
+
+  // Titles user has already watched (case-insensitive)
+  const seenTitles = new Set(watched.map(m => m.title.toLowerCase()));
+
+  // Watchlist items annotated
+  const wlCandidates = watchlist
+    .filter(m => !seenTitles.has(m.title.toLowerCase()))
+    .map(m => ({
+      ...m,
+      fromWatchlist: true,
+      // If watchlist entry has no mood/audience, default to empty arrays
+      audience: m.audience || [],
+      mood:     m.mood     || [],
+    }));
+
+  // Seed films not already watched and not already in watchlist
+  const wlTitles = new Set(watchlist.map(m => m.title.toLowerCase()));
+  const seedCandidates = SEED_MOVIES.filter(
+    m => !seenTitles.has(m.title.toLowerCase()) &&
+         !wlTitles.has(m.title.toLowerCase())
+  );
+
+  return [...wlCandidates, ...seedCandidates];
+}
+
+function rankCandidates(candidates, prefs) {
+  return candidates
+    .map(m => ({ movie: m, score: scoreMovie(m, prefs) }))
+    .sort((a, b) => b.score - a.score);
+}
+
+function getRecommendation() {
+  skipCount = 0;
+  const prefs = getPrefs();
+  const candidates = buildCandidates(prefs);
+
+  if (!candidates.length) {
+    showToast('😅', 'No movies found — try different preferences or add movies to your watchlist!', 'info');
+    return;
+  }
+
+  allResults = rankCandidates(candidates, prefs);
+  showResult(0, prefs);
+}
+
+function surpriseMe() {
+  // Reset all preferences to "any" first
+  document.querySelectorAll('#genreChips .chip').forEach(b => {
+    b.classList.toggle('selected', b.dataset.value === 'any');
+  });
+  document.querySelectorAll('.runtime-card').forEach(b => {
+    b.classList.toggle('selected', b.dataset.value === 'any');
+  });
+  document.querySelectorAll('.audience-card').forEach(b => {
+    b.classList.toggle('selected', b.dataset.value === 'any');
+  });
+  document.querySelectorAll('.mood-chip').forEach(b => {
+    b.classList.toggle('selected', b.dataset.value === 'any');
+  });
+  getRecommendation();
+}
+
+function skipRecommendation() {
+  skipCount++;
+  if (skipCount >= allResults.length) skipCount = 0;
+  showResult(skipCount, getPrefs());
+}
+
+// ─────────────────────────────────────────────
+// DISPLAY RESULT
+// ─────────────────────────────────────────────
+function showResult(idx, prefs) {
+  if (!allResults.length) return;
+  const { movie } = allResults[idx];
+  currentResult = movie;
+
+  // Subtitle
+  const parts = [];
+  if (prefs.genre    !== 'any') parts.push(prefs.genre + ' film');
+  if (prefs.runtime  !== 'any') parts.push({ short:'under 90 min', medium:'90–120 min', long:'over 2 hrs' }[prefs.runtime]);
+  if (prefs.audience !== 'any') parts.push('for ' + prefs.audience);
+  if (prefs.mood     !== 'any') parts.push(prefs.mood);
+  document.getElementById('resultSubtitle').textContent =
+    parts.length ? 'Perfect for: ' + parts.join(' · ') : 'Based on your preferences';
+
+  // Poster
+  const poster = document.getElementById('mainPoster');
+  poster.style.background = genreGradient(movie.genre);
+  poster.textContent = initials(movie.title);
+
+  // Title & meta
+  document.getElementById('mainTitle').textContent = movie.title;
+
+  const metaEl = document.getElementById('mainMeta');
+  metaEl.innerHTML =
+    (movie.year    ? `<span style="color:var(--text-secondary)">${movie.year}</span>` : '') +
+    (movie.genre   ? `<span class="genre-badge ${genreClass(movie.genre)}">${movie.genre}</span>` : '') +
+    (movie.runtime ? `<span class="movie-runtime">⏱ ${movie.runtime} min</span>` : '') +
+    (movie.director ? `<span style="color:var(--text-muted);font-size:.85rem">dir. ${escHtml(movie.director)}</span>` : '');
+
+  // Why it matches
+  document.getElementById('mainWhy').textContent = buildWhyText(movie, prefs);
+
+  // Review
+  document.getElementById('mainReview').textContent =
+    movie.review || (movie.fromWatchlist ? 'From your watchlist.' : '');
+
+  // Alternatives (next 3 after current)
+  const alts = allResults.filter((_, i) => i !== idx).slice(0, 3);
+  const altGrid = document.getElementById('altGrid');
+  const altSec  = document.getElementById('altSection');
+  if (alts.length) {
+    altGrid.innerHTML = alts.map(({ movie: m }) => `
+      <div class="alt-card" onclick="showAltAsMain('${m.id || m.title}')">
+        <div class="alt-poster" style="background:${genreGradient(m.genre)}">
+          ${initials(m.title)}
+        </div>
+        <div class="alt-title">${escHtml(m.title)}</div>
+        <div class="alt-meta">
+          ${m.year ? m.year + ' · ' : ''}${m.genre || ''}${m.runtime ? ' · ' + m.runtime + 'm' : ''}
+        </div>
+        <div class="alt-review">${escHtml(m.review || '')}</div>
+      </div>`).join('');
+    altSec.style.display = '';
+  } else {
+    altSec.style.display = 'none';
+  }
+
+  // Show result section
+  document.getElementById('resultSection').classList.add('active');
+  document.getElementById('resultSection').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function buildWhyText(movie, prefs) {
+  const reasons = [];
+  if (prefs.genre    !== 'any' && movie.genre   === prefs.genre)           reasons.push(`it's a ${movie.genre} film`);
+  if (prefs.runtime  !== 'any') {
+    const rt = movie.runtime;
+    if (prefs.runtime === 'short'  && rt && rt < 90)              reasons.push('it fits your short time slot');
+    if (prefs.runtime === 'medium' && rt && rt >= 90 && rt <= 120) reasons.push('it fits your 90–120 min window');
+    if (prefs.runtime === 'long'   && rt && rt > 120)              reasons.push('it\'s a great epic sit-down watch');
+  }
+  if (prefs.audience !== 'any' && (movie.audience||[]).includes(prefs.audience))
+    reasons.push(`it's great to watch ${prefs.audience === 'couple' ? 'with your partner' : 'with ' + prefs.audience}`);
+  if (prefs.mood !== 'any' && (movie.mood||[]).includes(prefs.mood))
+    reasons.push(`it matches your "${prefs.mood}" mood`);
+  if (movie.fromWatchlist)
+    reasons.push('it\'s already in your watchlist');
+  return reasons.length ? 'Recommended because ' + reasons.join(', ') + '.' : 'A great pick for tonight!';
+}
+
+function showAltAsMain(movieId) {
+  const idx = allResults.findIndex(r => (r.movie.id || r.movie.title) === movieId);
+  if (idx !== -1) showResult(idx, getPrefs());
+}
+
+// ─────────────────────────────────────────────
+// ADD RESULT TO WATCHLIST
+// ─────────────────────────────────────────────
+function addResultToWatchlist() {
+  if (!currentResult) return;
+  const WATCHLIST_KEY = 'cinetrack_watchlist';
+  const list = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]');
+
+  if (list.some(m => m.title.toLowerCase() === currentResult.title.toLowerCase())) {
+    showToast('📋', 'Already in your watchlist!', 'info');
+    return;
+  }
+  list.unshift({
+    id:        Date.now().toString(36) + Math.random().toString(36).slice(2),
+    title:     currentResult.title,
+    year:      currentResult.year,
+    genre:     currentResult.genre,
+    runtime:   currentResult.runtime,
+    priority:  'medium',
+    source:    'CineTrack Recommendation',
+    review:    currentResult.review || '',
+    dateAdded: new Date().toISOString().slice(0,10),
+  });
+  localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list));
+  showToast('📋', `"${currentResult.title}" added to your watchlist!`, 'success');
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function genreClass(g)    { return g ? 'genre-' + g.toLowerCase().replace(/[^a-z]/g,'') : ''; }
+function initials(t) {
+  return t.split(' ').filter(w => w).map(w => w[0].toUpperCase()).slice(0,3).join('');
+}
+function genreGradient(g) {
+  const m = {
+    'Action':'linear-gradient(135deg,#ff6b35,#e50914)',
+    'Comedy':'linear-gradient(135deg,#ffd93d,#ff6b35)',
+    'Drama':'linear-gradient(135deg,#6b4c93,#3b1c6e)',
+    'Horror':'linear-gradient(135deg,#4a0000,#8b0000)',
+    'Sci-Fi':'linear-gradient(135deg,#0077b6,#00b4d8)',
+    'Romance':'linear-gradient(135deg,#ee4d9b,#ff6b6b)',
+    'Animation':'linear-gradient(135deg,#3d9970,#a8e6cf)',
+    'Mystery':'linear-gradient(135deg,#2d3436,#636e72)',
+    'Thriller':'linear-gradient(135deg,#1a1a2e,#4a4a6e)',
+    'Documentary':'linear-gradient(135deg,#e17055,#fdcb6e)',
+  };
+  return m[g] || 'linear-gradient(135deg,#2a2a4a,#1a1a3a)';
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function showToast(icon, msg, type) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent  = msg;
+  t.className = 'toast toast-' + (type||'success') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>

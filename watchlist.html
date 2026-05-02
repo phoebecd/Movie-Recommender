@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineTrack – Watchlist</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===== NAVIGATION ===== -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-icon">🎬</span>
+      <span class="logo-text">Cine<span>Track</span></span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">🎥 <span>Watched</span></a></li>
+      <li><a href="watchlist.html" class="active">📋 <span>Watchlist</span></a></li>
+      <li><a href="recommend.html">✨ <span>Recommend</span></a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main class="main-content">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header-text">
+      <h1>📋 Watchlist</h1>
+      <p>Movies you want to watch — with recommendations and reviews</p>
+    </div>
+    <button class="btn btn-primary" onclick="openAddModal()">＋ Add to Watchlist</button>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat-card">
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-label">In Queue</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statHighPriority">0</div>
+      <div class="stat-label">High Priority</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statGenres">0</div>
+      <div class="stat-label">Genres Covered</div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('recent', this)">🕐 Recently Added</button>
+    <button class="filter-btn" onclick="setFilter('priority', this)">🔥 Priority</button>
+    <button class="filter-btn" onclick="setFilter('az', this)">🔤 A–Z</button>
+    <select id="genreFilter" onchange="applyFilters()"
+      style="max-width:160px;border-radius:20px;padding:8px 36px 8px 16px;">
+      <option value="">All Genres</option>
+      <option>Action</option><option>Animation</option><option>Comedy</option>
+      <option>Documentary</option><option>Drama</option><option>Horror</option>
+      <option>Mystery</option><option>Romance</option><option>Sci-Fi</option>
+      <option>Thriller</option>
+    </select>
+    <input type="text" id="searchInput" class="search-input"
+      placeholder="🔍 Search watchlist…" oninput="applyFilters()">
+  </div>
+
+  <!-- Movie Grid -->
+  <div class="movie-grid" id="movieGrid"></div>
+
+</main>
+
+<!-- ===== ADD / EDIT MODAL ===== -->
+<div class="modal-overlay" id="addMovieModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add to Watchlist</h2>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <form id="movieForm" onsubmit="saveMovie(event)">
+      <div class="form-group">
+        <label for="movieTitle">Movie Title *</label>
+        <input type="text" id="movieTitle" placeholder="e.g. Oppenheimer" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="movieYear">Year</label>
+          <input type="number" id="movieYear" placeholder="e.g. 2023" min="1900" max="2099">
+        </div>
+        <div class="form-group">
+          <label for="movieRuntime">Runtime (min)</label>
+          <input type="number" id="movieRuntime" placeholder="e.g. 180" min="1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="movieGenre">Genre</label>
+          <select id="movieGenre">
+            <option value="">Select genre…</option>
+            <option>Action</option><option>Animation</option><option>Comedy</option>
+            <option>Documentary</option><option>Drama</option><option>Horror</option>
+            <option>Mystery</option><option>Romance</option><option>Sci-Fi</option>
+            <option>Thriller</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="moviePriority">Priority</label>
+          <select id="moviePriority">
+            <option value="high">🔥 High</option>
+            <option value="medium" selected>📌 Medium</option>
+            <option value="low">📎 Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="movieSource">Recommended By / Source</label>
+        <input type="text" id="movieSource" placeholder="e.g. Friend, IMDb Top 250, Critic review…">
+      </div>
+      <div class="form-group">
+        <label for="movieReview">Why Watch It? (Reviews / Notes)</label>
+        <textarea id="movieReview"
+          placeholder="Include critic reviews, why it's recommended, notes from friends…"></textarea>
+      </div>
+      <input type="hidden" id="editMovieId">
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Add to Watchlist</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MARK AS WATCHED MODAL ===== -->
+<div class="modal-overlay" id="watchedModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>✅ Mark as Watched</h2>
+      <button class="modal-close" onclick="closeWatchedModal()">✕</button>
+    </div>
+    <p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:.9rem">
+      You watched <strong id="watchedMovieName"></strong>! How was it?
+    </p>
+    <form id="watchedForm" onsubmit="markAsWatched(event)">
+      <div class="form-group">
+        <label>Your Rating</label>
+        <div class="star-input-container" id="watchedRatingInput">
+          <button type="button" class="star-btn" data-val="1">★</button>
+          <button type="button" class="star-btn" data-val="2">★</button>
+          <button type="button" class="star-btn" data-val="3">★</button>
+          <button type="button" class="star-btn" data-val="4">★</button>
+          <button type="button" class="star-btn" data-val="5">★</button>
+        </div>
+        <input type="hidden" id="watchedRating"  value="0">
+        <input type="hidden" id="watchedMovieId" value="">
+      </div>
+      <div class="form-group">
+        <label for="watchedDate">Date Watched</label>
+        <input type="date" id="watchedDate">
+      </div>
+      <div class="form-group">
+        <label for="watchedReview">Your Review</label>
+        <textarea id="watchedReview" placeholder="What did you think?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeWatchedModal()">Cancel</button>
+        <button type="submit" class="btn btn-success">✅ Move to Watched</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon"></span>
+  <span class="toast-msg"  id="toastMsg"></span>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────
+const WATCHLIST_KEY = 'cinetrack_watchlist';
+const WATCHED_KEY   = 'cinetrack_watched';
+
+function getWatchlist()       { return JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]'); }
+function saveWatchlist(items) { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(items)); }
+function getWatched()         { return JSON.parse(localStorage.getItem(WATCHED_KEY)   || '[]'); }
+function saveWatched(items)   { localStorage.setItem(WATCHED_KEY,   JSON.stringify(items)); }
+function genId()              { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+// ─────────────────────────────────────────────
+// STATS
+// ─────────────────────────────────────────────
+function updateStats() {
+  const movies = getWatchlist();
+  document.getElementById('statTotal').textContent        = movies.length;
+  document.getElementById('statHighPriority').textContent = movies.filter(m => m.priority === 'high').length;
+  document.getElementById('statGenres').textContent       = new Set(movies.map(m => m.genre).filter(Boolean)).size;
+}
+
+// ─────────────────────────────────────────────
+// FILTER / SORT
+// ─────────────────────────────────────────────
+let currentFilter = 'recent';
+const PRIO = { high: 0, medium: 1, low: 2 };
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  let movies = getWatchlist();
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const g = document.getElementById('genreFilter').value;
+  if (q) movies = movies.filter(m => m.title.toLowerCase().includes(q));
+  if (g) movies = movies.filter(m => m.genre === g);
+  if      (currentFilter === 'recent')   movies.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+  else if (currentFilter === 'priority') movies.sort((a, b) => (PRIO[a.priority]||1) - (PRIO[b.priority]||1));
+  else                                   movies.sort((a, b) => a.title.localeCompare(b.title));
+  renderMovies(movies);
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+function genreClass(g) { return g ? 'genre-' + g.toLowerCase().replace(/[^a-z]/g,'') : ''; }
+function genreGradient(g) {
+  const m = {
+    'Action':'linear-gradient(135deg,#ff6b35,#e50914)',
+    'Comedy':'linear-gradient(135deg,#ffd93d,#ff6b35)',
+    'Drama':'linear-gradient(135deg,#6b4c93,#3b1c6e)',
+    'Horror':'linear-gradient(135deg,#4a0000,#8b0000)',
+    'Sci-Fi':'linear-gradient(135deg,#0077b6,#00b4d8)',
+    'Romance':'linear-gradient(135deg,#ee4d9b,#ff6b6b)',
+    'Animation':'linear-gradient(135deg,#3d9970,#a8e6cf)',
+    'Mystery':'linear-gradient(135deg,#2d3436,#636e72)',
+    'Thriller':'linear-gradient(135deg,#1a1a2e,#4a4a6e)',
+    'Documentary':'linear-gradient(135deg,#e17055,#fdcb6e)',
+  };
+  return m[g] || 'linear-gradient(135deg,#2a2a4a,#1a1a3a)';
+}
+function initials(t) {
+  return t.split(' ').filter(w => w).map(w => w[0].toUpperCase()).slice(0,3).join('');
+}
+function prioBadge(p) {
+  const labels = { high: '🔥 High', medium: '📌 Medium', low: '📎 Low' };
+  return p ? `<span class="priority-badge priority-${p}">${labels[p] || p}</span>` : '';
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function renderMovies(movies) {
+  const grid = document.getElementById('movieGrid');
+  if (!movies.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>Your watchlist is empty</h3>
+        <p>Add movies you want to watch — include reviews and recommendations!</p>
+      </div>`;
+    return;
+  }
+  grid.innerHTML = movies.map(mv => `
+    <div class="movie-card">
+      <div class="movie-poster" style="background:${genreGradient(mv.genre)}">
+        ${initials(mv.title)}
+      </div>
+      <div class="movie-info">
+        <div class="movie-title" title="${escHtml(mv.title)}">${escHtml(mv.title)}</div>
+        <div class="movie-meta">
+          ${mv.year    ? `<span class="movie-year">${mv.year}</span>` : ''}
+          ${mv.genre   ? `<span class="genre-badge ${genreClass(mv.genre)}">${mv.genre}</span>` : ''}
+          ${mv.runtime ? `<span class="movie-runtime">⏱ ${mv.runtime}m</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap;">
+          ${prioBadge(mv.priority)}
+          ${mv.source ? `<span style="font-size:.78rem;color:var(--text-muted)">via ${escHtml(mv.source)}</span>` : ''}
+        </div>
+        ${mv.review ? `<div class="movie-review">${escHtml(mv.review)}</div>` : ''}
+        <div class="movie-footer">
+          <span class="movie-date">${mv.dateAdded ? '📅 ' + fmtDate(mv.dateAdded) : ''}</span>
+          <div class="card-actions">
+            <button class="card-btn btn-watched"
+              onclick="openWatchedModal('${mv.id}')" title="Mark as watched">✅</button>
+            <button class="card-btn btn-edit"
+              onclick="openEditModal('${mv.id}')" title="Edit">✏️</button>
+            <button class="card-btn btn-delete"
+              onclick="deleteMovie('${mv.id}')" title="Remove">🗑</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────
+// MODALS
+// ─────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('modalTitle').textContent = 'Add to Watchlist';
+  document.getElementById('saveBtn').textContent    = 'Add to Watchlist';
+  document.getElementById('movieForm').reset();
+  document.getElementById('editMovieId').value      = '';
+  document.getElementById('moviePriority').value    = 'medium';
+  document.getElementById('addMovieModal').classList.add('active');
+}
+function closeAddModal()     { document.getElementById('addMovieModal').classList.remove('active'); }
+function closeWatchedModal() { document.getElementById('watchedModal').classList.remove('active'); }
+
+function openEditModal(id) {
+  const mv = getWatchlist().find(m => m.id === id);
+  if (!mv) return;
+  document.getElementById('modalTitle').textContent = 'Edit Watchlist Entry';
+  document.getElementById('saveBtn').textContent    = 'Save Changes';
+  document.getElementById('movieTitle').value    = mv.title    || '';
+  document.getElementById('movieYear').value     = mv.year     || '';
+  document.getElementById('movieRuntime').value  = mv.runtime  || '';
+  document.getElementById('movieGenre').value    = mv.genre    || '';
+  document.getElementById('moviePriority').value = mv.priority || 'medium';
+  document.getElementById('movieSource').value   = mv.source   || '';
+  document.getElementById('movieReview').value   = mv.review   || '';
+  document.getElementById('editMovieId').value   = id;
+  document.getElementById('addMovieModal').classList.add('active');
+}
+
+function openWatchedModal(id) {
+  const mv = getWatchlist().find(m => m.id === id);
+  if (!mv) return;
+  document.getElementById('watchedMovieName').textContent = mv.title;
+  document.getElementById('watchedMovieId').value         = id;
+  document.getElementById('watchedDate').value            = new Date().toISOString().slice(0,10);
+  document.getElementById('watchedReview').value          = '';
+  document.getElementById('watchedRating').value          = '0';
+  setWatchedStar(0);
+  document.getElementById('watchedModal').classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+// STAR INPUT – Add modal (no rating here, but kept for uniform experience)
+// STAR INPUT – Watched modal
+// ─────────────────────────────────────────────
+function setWatchedStar(val) {
+  document.querySelectorAll('#watchedRatingInput .star-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.val) <= val);
+  });
+  document.getElementById('watchedRating').value = val;
+}
+
+document.querySelectorAll('#watchedRatingInput .star-btn').forEach(btn => {
+  btn.addEventListener('click', () => setWatchedStar(parseInt(btn.dataset.val)));
+  btn.addEventListener('mouseenter', () => {
+    const v = parseInt(btn.dataset.val);
+    document.querySelectorAll('#watchedRatingInput .star-btn').forEach(b => {
+      b.style.color = parseInt(b.dataset.val) <= v ? 'var(--gold)' : '';
+    });
+  });
+});
+document.getElementById('watchedRatingInput').addEventListener('mouseleave', () => {
+  setWatchedStar(parseInt(document.getElementById('watchedRating').value) || 0);
+});
+
+// ─────────────────────────────────────────────
+// CRUD
+// ─────────────────────────────────────────────
+function saveMovie(e) {
+  e.preventDefault();
+  const title = document.getElementById('movieTitle').value.trim();
+  if (!title) return;
+
+  const list   = getWatchlist();
+  const editId = document.getElementById('editMovieId').value;
+  const data = {
+    title,
+    year:     parseInt(document.getElementById('movieYear').value)    || null,
+    runtime:  parseInt(document.getElementById('movieRuntime').value) || null,
+    genre:    document.getElementById('movieGenre').value             || null,
+    priority: document.getElementById('moviePriority').value          || 'medium',
+    source:   document.getElementById('movieSource').value.trim()     || null,
+    review:   document.getElementById('movieReview').value.trim()     || null,
+  };
+
+  if (editId) {
+    const idx = list.findIndex(m => m.id === editId);
+    if (idx !== -1) list[idx] = { ...list[idx], ...data };
+    showToast('✅', 'Entry updated!', 'success');
+  } else {
+    data.id        = genId();
+    data.dateAdded = new Date().toISOString().slice(0,10);
+    list.unshift(data);
+    showToast('📋', 'Added to watchlist!', 'success');
+  }
+  saveWatchlist(list);
+  closeAddModal();
+  updateStats();
+  applyFilters();
+}
+
+function markAsWatched(e) {
+  e.preventDefault();
+  const id = document.getElementById('watchedMovieId').value;
+  const list = getWatchlist();
+  const mv   = list.find(m => m.id === id);
+  if (!mv) return;
+
+  // Add to watched list
+  const watched = getWatched();
+  watched.unshift({
+    id:          genId(),
+    title:       mv.title,
+    year:        mv.year,
+    genre:       mv.genre,
+    runtime:     mv.runtime,
+    rating:      parseInt(document.getElementById('watchedRating').value) || 0,
+    dateWatched: document.getElementById('watchedDate').value  || new Date().toISOString().slice(0,10),
+    review:      document.getElementById('watchedReview').value.trim() || null,
+    dateAdded:   new Date().toISOString().slice(0,10),
+  });
+  saveWatched(watched);
+
+  // Remove from watchlist
+  saveWatchlist(list.filter(m => m.id !== id));
+
+  closeWatchedModal();
+  updateStats();
+  applyFilters();
+  showToast('🎬', `"${mv.title}" moved to Watched!`, 'success');
+}
+
+function deleteMovie(id) {
+  const list = getWatchlist();
+  const mv   = list.find(m => m.id === id);
+  if (!mv) return;
+  if (!confirm(`Remove "${mv.title}" from your watchlist?`)) return;
+  saveWatchlist(list.filter(m => m.id !== id));
+  updateStats(); applyFilters();
+  showToast('🗑', 'Removed from watchlist', 'info');
+}
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function showToast(icon, msg, type) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent  = msg;
+  t.className = 'toast toast-' + (type||'success') + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Overlay click closes modals
+document.getElementById('addMovieModal').addEventListener('click', e => { if (e.target===e.currentTarget) closeAddModal(); });
+document.getElementById('watchedModal').addEventListener('click',  e => { if (e.target===e.currentTarget) closeWatchedModal(); });
+
+// INIT
+updateStats();
+applyFilters();
+</script>
+</body>
+</html>
