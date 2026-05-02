@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import axios from 'axios';
 
 admin.initializeApp();
@@ -25,15 +26,15 @@ export const getRecommendations = onCall(async (request) => {
   // Check cache (30-min TTL)
   const cacheRef = db.collection('users').doc(uid).collection('recommendationCache').doc('latest');
   const cacheSnap = await cacheRef.get();
-  
+
   if (cacheSnap.exists) {
     const cacheData = cacheSnap.data();
-    const now = admin.firestore.Timestamp.now().toMillis();
-    const cacheTime = cacheData?.timestamp.toMillis();
+    const now = Date.now();
+    const cacheTime = cacheData?.timestamp?.toMillis?.() || 0;
     if (now - cacheTime < 30 * 60 * 1000) {
-       if (JSON.stringify(cacheData?.survey) === JSON.stringify(survey)) {
-         return { recommendations: cacheData?.recommendations, cached: true };
-       }
+      if (JSON.stringify(cacheData?.survey) === JSON.stringify(survey)) {
+        return { recommendations: cacheData?.recommendations, cached: true };
+      }
     }
   }
 
@@ -61,7 +62,7 @@ export const getRecommendations = onCall(async (request) => {
     await cacheRef.set({
       survey,
       recommendations: finalRecs,
-      timestamp: admin.firestore.Timestamp.now()
+      timestamp: FieldValue.serverTimestamp()
     });
 
     return { recommendations: finalRecs, cached: false };
@@ -75,7 +76,7 @@ export const getRecommendations = onCall(async (request) => {
 export const computeUserVector = onCall(async (request) => {
   const uid = getAuthUid(request.auth);
   const { profile } = request.data;
-  
+
   let profileData = profile;
   if (!profileData) {
     const profileSnap = await db.collection('users').doc(uid).collection('profile').doc('data').get();
@@ -103,11 +104,11 @@ export const computeUserVector = onCall(async (request) => {
 
     const { vector, clusterLabel } = response.data;
 
-    await db.collection('users').doc(uid).update({
+    await db.collection('users').doc(uid).set({
       userVector: vector,
       clusterLabel,
-      lastVectorUpdate: admin.firestore.Timestamp.now()
-    });
+      lastVectorUpdate: FieldValue.serverTimestamp()
+    }, { merge: true });
 
     return { vector, clusterLabel };
   } catch (error) {
@@ -143,8 +144,8 @@ export const getBlendedRecommendations = onCall(async (request) => {
 
     const recommendations = response.data.recommendations;
     const recsWithMovies = await Promise.all(recommendations.map(async (r: any) => {
-       const mSnap = await db.collection('movies').doc(r.movieId).get();
-       return { ...r, movie: mSnap.exists ? { id: mSnap.id, ...mSnap.data() } : null };
+      const mSnap = await db.collection('movies').doc(r.movieId).get();
+      return { ...r, movie: mSnap.exists ? { id: mSnap.id, ...mSnap.data() } : null };
     }));
 
     return { recommendations: recsWithMovies.filter(r => r.movie !== null) };
@@ -162,9 +163,9 @@ export const logWatchedMovie = onCall(async (request) => {
   await db.collection('users').doc(uid).collection('watched').doc(movieId).set({
     ...entry,
     movieId,
-    dateWatched: admin.firestore.Timestamp.now()
+    dateWatched: FieldValue.serverTimestamp()
   });
-  
+
   return { success: true };
 });
 
@@ -214,8 +215,8 @@ export const sendFriendRequest = onCall(async (request) => {
   const myRef = db.collection('users').doc(uid).collection('friends').doc(targetUid);
   const targetRef = db.collection('users').doc(targetUid).collection('friends').doc(uid);
 
-  batch.set(myRef, { friendUid: targetUid, status: 'pending', initiatedBy: uid, createdAt: admin.firestore.Timestamp.now() });
-  batch.set(targetRef, { friendUid: uid, status: 'pending', initiatedBy: uid, createdAt: admin.firestore.Timestamp.now() });
+  batch.set(myRef, { friendUid: targetUid, status: 'pending', initiatedBy: uid, createdAt: FieldValue.serverTimestamp() });
+  batch.set(targetRef, { friendUid: uid, status: 'pending', initiatedBy: uid, createdAt: FieldValue.serverTimestamp() });
 
   await batch.commit();
   return { success: true };
@@ -239,33 +240,33 @@ export const acceptFriendRequest = onCall(async (request) => {
 
 // 9. Stats trigger (v2)
 export const updateStats = onDocumentWritten('users/{uid}/watched/{movieId}', async (event) => {
-    const uid = event.params.uid;
-    
-    const watchedSnap = await db.collection('users').doc(uid).collection('watched').get();
-    const watchedDocs = watchedSnap.docs.map(d => d.data());
-    
-    if (watchedDocs.length === 0) return;
+  const uid = event.params.uid;
 
-    const totalWatched = watchedDocs.length;
-    const averageRating = watchedDocs.reduce((acc, curr) => acc + (curr.rating || 0), 0) / totalWatched;
-    
-    const movieIds = watchedDocs.map(d => d.movieId);
-    const movieDocs = await Promise.all(movieIds.map(id => db.collection('movies').doc(id).get()));
-    const genres = movieDocs.filter(d => d.exists).flatMap(d => d.data()?.genres || []);
-    
-    const genreCounts: Record<string, number> = {};
-    genres.forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1);
-    const mostWatchedGenre = Object.keys(genreCounts).reduce((a, b) => genreCounts[a] > genreCounts[b] ? a : b, 'None');
+  const watchedSnap = await db.collection('users').doc(uid).collection('watched').get();
+  const watchedDocs = watchedSnap.docs.map(d => d.data());
 
-    const highestRated = watchedDocs.reduce((prev, curr) => (prev.rating > curr.rating) ? prev : curr);
+  if (watchedDocs.length === 0) return;
 
-    await db.collection('users').doc(uid).update({
-      stats: {
-        totalWatched,
-        averageRating,
-        mostWatchedGenre,
-        highestRatedMovieId: highestRated.movieId,
-        watchStreak: 1
-      }
-    });
+  const totalWatched = watchedDocs.length;
+  const averageRating = watchedDocs.reduce((acc, curr) => acc + (curr.rating || 0), 0) / totalWatched;
+
+  const movieIds = watchedDocs.map(d => d.movieId);
+  const movieDocs = await Promise.all(movieIds.map(id => db.collection('movies').doc(id).get()));
+  const genres = movieDocs.filter(d => d.exists).flatMap(d => d.data()?.genres || []);
+
+  const genreCounts: Record<string, number> = {};
+  genres.forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1);
+  const mostWatchedGenre = Object.keys(genreCounts).reduce((a, b) => genreCounts[a] > genreCounts[b] ? a : b, 'None');
+
+  const highestRated = watchedDocs.reduce((prev, curr) => (prev.rating > curr.rating) ? prev : curr);
+
+  await db.collection('users').doc(uid).set({
+    stats: {
+      totalWatched,
+      averageRating,
+      mostWatchedGenre,
+      highestRatedMovieId: highestRated.movieId,
+      watchStreak: 1
+    }
+  }, { merge: true });
 });

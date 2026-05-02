@@ -56,7 +56,6 @@ const MOOD_KEYWORD_MAP: Record<string, string> = {
   // Be Scared / Thrilled
   scared: 'Be Scared',
   scary: 'Be Scared',
-  scary: 'Be Scared',
   thrilled: 'Be Scared',
   horror: 'Be Scared',
   creepy: 'Be Scared',
