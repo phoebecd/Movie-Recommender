@@ -397,6 +397,14 @@ function getPrefs() {
 }
 
 // ─────────────────────────────────────────────
+// SCORING CONSTANTS
+// ─────────────────────────────────────────────
+const RUNTIME_SHORT_MAX  = 90;   // minutes — "Quick Watch" upper bound
+const RUNTIME_MEDIUM_MAX = 120;  // minutes — "Standard" upper bound
+// Jitter adds a small random boost so re-runs produce variety even with identical prefs
+const JITTER_MAX = 5;
+
+// ─────────────────────────────────────────────
 // RECOMMENDATION ALGORITHM
 // ─────────────────────────────────────────────
 function scoreMovie(movie, prefs) {
@@ -407,10 +415,10 @@ function scoreMovie(movie, prefs) {
 
   // Runtime
   const rt = movie.runtime;
-  if (prefs.runtime === 'any')                                  score += 20;
-  else if (prefs.runtime === 'short'  && rt && rt < 90)        score += 20;
-  else if (prefs.runtime === 'medium' && rt && rt >= 90 && rt <= 120) score += 20;
-  else if (prefs.runtime === 'long'   && rt && rt > 120)       score += 20;
+  if (prefs.runtime === 'any')                                                         score += 20;
+  else if (prefs.runtime === 'short'  && rt && rt < RUNTIME_SHORT_MAX)                score += 20;
+  else if (prefs.runtime === 'medium' && rt && rt >= RUNTIME_SHORT_MAX && rt <= RUNTIME_MEDIUM_MAX) score += 20;
+  else if (prefs.runtime === 'long'   && rt && rt > RUNTIME_MEDIUM_MAX)               score += 20;
 
   // Audience
   const aud = movie.audience || [];
@@ -423,8 +431,8 @@ function scoreMovie(movie, prefs) {
   // Bonus for watchlist movies (user curated)
   if (movie.fromWatchlist) score += 15;
 
-  // Add small random jitter for variety
-  score += Math.random() * 5;
+  // Small random jitter so repeated recommendations produce variety
+  score += Math.random() * JITTER_MAX;
 
   return score;
 }
@@ -612,7 +620,7 @@ function addResultToWatchlist() {
     priority:  'medium',
     source:    'CineTrack Recommendation',
     review:    currentResult.review || '',
-    dateAdded: new Date().toISOString().slice(0,10),
+    dateAdded: todayISODate(),
   });
   localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list));
   showToast('📋', `"${currentResult.title}" added to your watchlist!`, 'success');
@@ -621,6 +629,7 @@ function addResultToWatchlist() {
 // ─────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────
+function todayISODate() { return new Date().toISOString().slice(0, 10); }
 function escHtml(s) {
   if (!s) return '';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

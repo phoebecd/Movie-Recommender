@@ -190,6 +190,7 @@ function saveWatchlist(items) { localStorage.setItem(WATCHLIST_KEY, JSON.stringi
 function getWatched()         { return JSON.parse(localStorage.getItem(WATCHED_KEY)   || '[]'); }
 function saveWatched(items)   { localStorage.setItem(WATCHED_KEY,   JSON.stringify(items)); }
 function genId()              { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function todayISODate()       { return new Date().toISOString().slice(0, 10); }
 
 // ─────────────────────────────────────────────
 // STATS
@@ -342,7 +343,7 @@ function openWatchedModal(id) {
   if (!mv) return;
   document.getElementById('watchedMovieName').textContent = mv.title;
   document.getElementById('watchedMovieId').value         = id;
-  document.getElementById('watchedDate').value            = new Date().toISOString().slice(0,10);
+  document.getElementById('watchedDate').value            = todayISODate();
   document.getElementById('watchedReview').value          = '';
   document.getElementById('watchedRating').value          = '0';
   setWatchedStar(0);
@@ -399,7 +400,7 @@ function saveMovie(e) {
     showToast('✅', 'Entry updated!', 'success');
   } else {
     data.id        = genId();
-    data.dateAdded = new Date().toISOString().slice(0,10);
+    data.dateAdded = todayISODate();
     list.unshift(data);
     showToast('📋', 'Added to watchlist!', 'success');
   }
@@ -425,9 +426,9 @@ function markAsWatched(e) {
     genre:       mv.genre,
     runtime:     mv.runtime,
     rating:      parseInt(document.getElementById('watchedRating').value) || 0,
-    dateWatched: document.getElementById('watchedDate').value  || new Date().toISOString().slice(0,10),
+    dateWatched: document.getElementById('watchedDate').value  || todayISODate(),
     review:      document.getElementById('watchedReview').value.trim() || null,
-    dateAdded:   new Date().toISOString().slice(0,10),
+    dateAdded:   todayISODate(),
   });
   saveWatched(watched);
 

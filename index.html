@@ -170,6 +170,7 @@ const STORAGE_KEY = 'cinetrack_watched';
 function getMovies()        { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
 function saveMovies(movies) { localStorage.setItem(STORAGE_KEY, JSON.stringify(movies)); }
 function genId()            { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function todayISODate()     { return new Date().toISOString().slice(0, 10); }
 
 // ─────────────────────────────────────────────
 // STATS
@@ -187,7 +188,7 @@ function updateStats() {
   const top = Object.keys(gc).sort((a, b) => gc[b] - gc[a])[0];
   document.getElementById('statFavGenre').textContent = top || '—';
 
-  const yr = new Date().getFullYear();
+  const yr = String(new Date().getFullYear());
   document.getElementById('statThisYear').textContent =
     movies.filter(m => m.dateWatched && m.dateWatched.startsWith(yr)).length;
 }
@@ -310,7 +311,7 @@ function openAddModal() {
   document.getElementById('editMovieId').value      = '';
   document.getElementById('movieRating').value      = '0';
   setStarInput(0);
-  document.getElementById('movieDateWatched').value = new Date().toISOString().slice(0,10);
+  document.getElementById('movieDateWatched').value = todayISODate();
   document.getElementById('addMovieModal').classList.add('active');
 }
 function closeAddModal()    { document.getElementById('addMovieModal').classList.remove('active'); }
@@ -420,7 +421,7 @@ function saveMovie(e) {
     showToast('✅', 'Movie updated!', 'success');
   } else {
     data.id = genId();
-    data.dateAdded = new Date().toISOString().slice(0,10);
+    data.dateAdded = todayISODate();
     movies.unshift(data);
     showToast('🎬', 'Added to your diary!', 'success');
   }
