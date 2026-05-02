@@ -34,23 +34,23 @@ MODELS_DIR = "." # Save in ml root for simplicity
 
 async def get_tmdb_metadata(tmdb_id):
     """Fetch poster, backdrop and watch providers from TMDB"""
-    headers = {"Authorization": f"Bearer {TMDB_API_KEY}", "accept": "application/json"}
     async with httpx.AsyncClient() as client:
         try:
             # 1. Get images
-            res = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}", headers=headers)
+            res = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={TMDB_API_KEY}")
             data = res.json()
             poster_url = f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else ""
             backdrop_url = f"https://image.tmdb.org/t/p/w1280{data.get('backdrop_path')}" if data.get('backdrop_path') else ""
             
             # 2. Get providers
-            res_p = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}/watch/providers", headers=headers)
-            providers_data = res_p.json()
-            us_providers = providers_data.get('results', {}).get('US', {}).get('flatrate', [])
+            res_p = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}/watch/providers?api_key={TMDB_API_KEY}")
+            data_p = res_p.json()
+            us_providers = data_p.get('results', {}).get('US', {}).get('flatrate', [])
             platforms = [p['provider_name'] for p in us_providers]
             
             return poster_url, backdrop_url, platforms
         except Exception as e:
+            print(f"TMDB Error for {tmdb_id}: {e}")
             return "", "", []
 
 def parse_genres(genre_str):
