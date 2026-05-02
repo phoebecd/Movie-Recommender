@@ -25,12 +25,7 @@ VITE_TMDB_API_KEY=your_v3_api_key
 ```
 
 ### Root / ML
-Create `.env` in the root (and copies for the `ml` folder):
-```env
-USE_EMULATORS=true
-FIREBASE_SERVICE_ACCOUNT_PATH=path/to/your/service-account.json
-FASTAPI_SECRET=your-shared-secret
-```
+Place the moviematch-3f5f8 json in the root of the ML folder.
 
 ---
 
@@ -65,7 +60,7 @@ You will need **three** terminal windows open:
 ### Terminal 1: Firebase Emulators
 Starting the local Auth, Firestore, and Functions environment.
 ```bash
-firebase emulators:start
+firebase emulators:start --project moviematch-3f5f8
 ```
 
 ### Terminal 2: ML Microservice
