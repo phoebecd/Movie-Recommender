@@ -39,12 +39,13 @@ export default function MovieOfTheDayPage() {
   const [result, setResult] = useState<ResultMovie | null>(null)
   const [loading, setLoading] = useState(false)
   const [excludeIds, setExcludeIds] = useState<string[]>([])
+  const [lastFormData, setLastFormData] = useState<FormData | null>(null)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
 
-  const onSubmit = async (data: FormData) => {
+  const fetchMovie = async (data: FormData, currentExcludeIds: string[]) => {
     if (!user) return
     setLoading(true)
     try {
@@ -58,13 +59,15 @@ export default function MovieOfTheDayPage() {
           watchingWith: data.watchingWith ?? 'Just me',
           energyLevel: data.engagement === 'Turn my brain off' ? 'Low' : data.engagement === 'Make me work for it' ? 'High' : 'Medium',
         },
-        excludeMovieIds: excludeIds,
+        excludeMovieIds: currentExcludeIds,
       })
 
-      const recs = res.data.recommendations
-      if (!recs.length) { toast.error('No recommendations found — try different inputs'); return }
+      // Filter out anything the user has already dismissed, regardless of what the CF returned
+      const recs = (res.data.recommendations as any[]).filter(
+        (r) => !currentExcludeIds.includes(r.movieId)
+      )
+      if (!recs.length) { toast.error('No more recommendations — try changing your inputs'); return }
 
-      // Fetch top movie + 2 alternatives
       const [topRec, ...altRecs] = recs
       const topSnap = await getDoc(doc(db, 'movies', topRec.movieId))
       if (!topSnap.exists()) { toast.error('Movie not found'); return }
@@ -72,7 +75,7 @@ export default function MovieOfTheDayPage() {
       const altMovies = await Promise.all(
         altRecs.slice(0, 2).map(async (r) => {
           const s = await getDoc(doc(db, 'movies', r.movieId))
-          return s.exists() ? { id: s.id, ...s.data() } as Movie : null
+          return s.exists() ? ({ id: s.id, ...s.data() } as Movie) : null
         })
       )
 
@@ -88,10 +91,17 @@ export default function MovieOfTheDayPage() {
     }
   }
 
-  const handleNotFeeling = () => {
-    if (!result) return
-    setExcludeIds((prev) => [...prev, result.movie.id])
-    setResult(null)
+  const onSubmit = async (data: FormData) => {
+    setLastFormData(data)
+    await fetchMovie(data, excludeIds)
+  }
+
+  const handleNotFeeling = async () => {
+    if (!result || !lastFormData) return
+    // Build the new exclusion list synchronously so fetchMovie sees it immediately
+    const newExcludeIds = [...excludeIds, result.movie.id]
+    setExcludeIds(newExcludeIds)
+    await fetchMovie(lastFormData, newExcludeIds)
   }
 
   return (
@@ -235,8 +245,16 @@ export default function MovieOfTheDayPage() {
 
                     {/* Actions */}
                     <div className="flex gap-3 pt-1">
-                      <button onClick={handleNotFeeling} className="btn-secondary flex-1 text-sm">
-                        Not feeling it ↺
+                      <button
+                        onClick={handleNotFeeling}
+                        disabled={loading}
+                        className="btn-secondary flex-1 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {loading ? (
+                          <><div className="w-3.5 h-3.5 border-2 border-zinc-500/30 border-t-zinc-400 rounded-full animate-spin" /> Finding another…</>
+                        ) : (
+                          <>Not feeling it ↺</>
+                        )}
                       </button>
                     </div>
                   </div>

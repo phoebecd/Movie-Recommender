@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { doc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore'
@@ -6,7 +6,8 @@ import { db } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { toast } from '../store/toastStore'
 import { StarRating } from './StarRating'
-import { TMDB_POSTER_URL, getMatchBadgeClass, getMatchLabel } from '../types'
+import { getMatchBadgeClass, getMatchLabel } from '../types'
+import { getMoviePosterUrl } from '../lib/tmdb'
 import type { Movie } from '../types'
 
 interface Props {
@@ -38,12 +39,24 @@ export function MovieCard({
   const navigate = useNavigate()
   const [imgLoaded, setImgLoaded] = useState(false)
   const [imgError, setImgError] = useState(false)
+  const [fallbackPoster, setFallbackPoster] = useState<string | null>(null)
   const [watchLater, setWatchLater] = useState(isInWatchLater ?? false)
   const [favorited, setFavorited] = useState(isInFavorites ?? false)
   const [showTooltip, setShowTooltip] = useState(false)
 
   useEffect(() => { setWatchLater(isInWatchLater ?? false) }, [isInWatchLater])
   useEffect(() => { setFavorited(isInFavorites ?? false) }, [isInFavorites])
+
+  // If posterUrl is missing, fetch it directly from TMDB
+  useEffect(() => {
+    if (!movie.posterUrl && movie.tmdb_id) {
+      getMoviePosterUrl(movie.tmdb_id).then((url) => {
+        if (url) setFallbackPoster(url)
+      }).catch(() => {})
+    }
+  }, [movie.tmdb_id, movie.posterUrl])
+
+  const posterSrc = movie.posterUrl || fallbackPoster
 
   const toggleWatchLater = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -101,9 +114,9 @@ export function MovieCard({
       {/* Poster */}
       <div className="relative w-full aspect-[2/3] bg-zinc-800 overflow-hidden">
         {!imgLoaded && !imgError && <div className="skeleton absolute inset-0" />}
-        {!imgError && movie.posterUrl ? (
+        {!imgError && posterSrc ? (
           <img
-            src={movie.posterUrl}
+            src={posterSrc}
             alt={movie.title}
             loading="lazy"
             onLoad={() => setImgLoaded(true)}

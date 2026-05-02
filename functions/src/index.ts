@@ -18,37 +18,113 @@ const getAuthUid = (auth: any) => {
   return auth.uid;
 };
 
+// Mood → likely genres mapping for contextual re-ranking
+const MOOD_GENRES: Record<string, string[]> = {
+  'Laugh':       ['Comedy', 'Animation', 'Family'],
+  'Cry':         ['Drama', 'Romance'],
+  'Think':       ['Thriller', 'Mystery', 'Science Fiction', 'Documentary'],
+  'Escape':      ['Adventure', 'Fantasy', 'Action', 'Science Fiction'],
+  'Be Scared':   ['Horror', 'Thriller'],
+  'Be Inspired': ['Drama', 'Documentary', 'History'],
+  'Feel Something': ['Drama', 'Romance', 'Music'],
+};
+
+const RUNTIME_RANGE: Record<string, [number, number]> = {
+  'Under 90 min': [0, 90],
+  '90–120 min':   [90, 120],
+  '2+ hours':     [120, 9999],
+  'No limit':     [0, 9999],
+};
+
+// Cap results so no single genre dominates the list
+function applyGenreCap(recs: any[], maxPerGenre = 4): any[] {
+  const counts: Record<string, number> = {};
+  return recs.filter((rec) => {
+    const primary: string = rec.movie?.genres?.[0];
+    if (!primary) return true;
+    counts[primary] = (counts[primary] ?? 0) + 1;
+    return counts[primary] <= maxPerGenre;
+  });
+}
+
+function applyContextualScoring(recs: any[], survey: any): any[] {
+  const moodGenres = (survey.mood as string[]).flatMap((m) => MOOD_GENRES[m] ?? []);
+  const [minRuntime, maxRuntime] = RUNTIME_RANGE[survey.runtime] ?? [0, 9999];
+
+  return recs.map((rec) => {
+    const movie = rec.movie;
+    let boost = 0;
+
+    // Genre-mood match: +0.15 per matching genre (capped at +0.25)
+    const matchedGenres: string[] = (movie.genres ?? []).filter((g: string) => moodGenres.includes(g));
+    boost += Math.min(matchedGenres.length * 0.15, 0.25);
+
+    // Runtime penalty: -0.15 if clearly outside selected range
+    if (movie.runtime && (movie.runtime < minRuntime || movie.runtime > maxRuntime)) {
+      boost -= 0.15;
+    }
+
+    // Quality bonus: up to +0.05 based on TMDB rating
+    if (movie.globalRating) boost += (movie.globalRating / 200);
+
+    // Build a specific whyThisText
+    let whyThisText = rec.whyThisText;
+    if (matchedGenres.length > 0) {
+      whyThisText = `Matches your ${matchedGenres[0]} taste${matchedGenres.length > 1 ? ` and ${matchedGenres[1]}` : ''} for your ${survey.mood[0]} mood.`;
+    } else if (movie.globalRating >= 7.5) {
+      whyThisText = `Highly rated ${movie.genres?.[0] ?? 'film'} that fits your taste profile.`;
+    }
+
+    return { ...rec, confidenceScore: Math.min(1, Math.max(0, rec.confidenceScore + boost)), whyThisText };
+  }).sort((a, b) => b.confidenceScore - a.confidenceScore);
+}
+
 // 1. getRecommendations
 export const getRecommendations = onCall(async (request) => {
   const uid = getAuthUid(request.auth);
   const { survey, excludeMovieIds = [] } = request.data;
 
-  // Check cache (30-min TTL)
-  const cacheRef = db.collection('users').doc(uid).collection('recommendationCache').doc('latest');
-  const cacheSnap = await cacheRef.get();
+  // Fetch user data + exclusion lists up-front (needed for both cache path and fresh path)
+  const [userSnap, favsSnap, watchedSnap] = await Promise.all([
+    db.collection('users').doc(uid).get(),
+    db.collection('users').doc(uid).collection('favorites').get(),
+    db.collection('users').doc(uid).collection('watched').get(),
+  ]);
 
-  if (cacheSnap.exists) {
-    const cacheData = cacheSnap.data();
-    const now = Date.now();
-    const cacheTime = cacheData?.timestamp?.toMillis?.() || 0;
-    if (now - cacheTime < 30 * 60 * 1000) {
-      if (JSON.stringify(cacheData?.survey) === JSON.stringify(survey)) {
-        return { recommendations: cacheData?.recommendations, cached: true };
+  const userVector = userSnap.data()?.userVector || [];
+  const alreadySeenIds = [
+    ...favsSnap.docs.map((d) => d.id),
+    ...watchedSnap.docs.map((d) => d.id),
+    ...excludeMovieIds,
+  ];
+
+  // Cache only applies to baseline requests (no user-explicit exclusions).
+  // "Not feeling it" always gets a fresh fetch so stale cache can never block it.
+  const cacheRef = db.collection('users').doc(uid).collection('recommendationCache').doc('latest');
+  if (excludeMovieIds.length === 0) {
+    const cacheSnap = await cacheRef.get();
+    if (cacheSnap.exists) {
+      const cacheData = cacheSnap.data();
+      const cacheTime = cacheData?.timestamp?.toMillis?.() || 0;
+      const surveyMatch = JSON.stringify(cacheData?.survey) === JSON.stringify(survey);
+      if (Date.now() - cacheTime < 30 * 60 * 1000 && surveyMatch) {
+        const filtered = (cacheData?.recommendations ?? []).filter(
+          (r: any) => !alreadySeenIds.includes(r.movieId)
+        );
+        return { recommendations: filtered, cached: true };
       }
     }
   }
-
-  const userSnap = await db.collection('users').doc(uid).get();
-  const userVector = userSnap.data()?.userVector || [];
 
   try {
     const response = await axios.post(`${FASTAPI_URL}/recommend`, {
       userVector,
       contextualInputs: survey,
-      excludeMovieIds,
-      limit: 20
+      excludeMovieIds: alreadySeenIds,
+      limit: 30, // fetch extra so contextual filtering has room to work
     }, {
-      headers: { 'Authorization': `Bearer ${FASTAPI_SECRET}` }
+      headers: { 'Authorization': `Bearer ${FASTAPI_SECRET}` },
+      timeout: 10000,
     });
 
     const recommendations = response.data.recommendations;
@@ -57,18 +133,32 @@ export const getRecommendations = onCall(async (request) => {
       return { ...r, movie: mSnap.exists ? { id: mSnap.id, ...mSnap.data() } : null };
     }));
 
-    const finalRecs = recsWithMovies.filter(r => r.movie !== null);
+    const enriched = recsWithMovies.filter((r) => r.movie !== null);
+    const finalRecs = applyGenreCap(applyContextualScoring(enriched, survey), 4).slice(0, 20);
 
-    await cacheRef.set({
-      survey,
-      recommendations: finalRecs,
-      timestamp: FieldValue.serverTimestamp()
-    });
-
+    await cacheRef.set({ survey, excludeMovieIds, recommendations: finalRecs, timestamp: FieldValue.serverTimestamp() });
     return { recommendations: finalRecs, cached: false };
   } catch (error) {
     console.error('FastAPI Recommend Error:', error);
-    throw new HttpsError('internal', 'ML service error');
+
+    // Fallback: return top-rated movies not already seen
+    const fallbackSnap = await db.collection('movies')
+      .orderBy('globalRating', 'desc')
+      .limit(60)
+      .get();
+
+    const fallbackRecs = fallbackSnap.docs
+      .filter((d) => !alreadySeenIds.includes(d.id))
+      .slice(0, 20)
+      .map((d) => ({
+        movieId: d.id,
+        confidenceScore: (d.data().globalRating ?? 5) / 10,
+        whyThisText: `Top-rated ${d.data().genres?.[0] ?? 'film'} you haven\'t seen yet.`,
+        movie: { id: d.id, ...d.data() },
+      }));
+
+    const fallbackWithContext = applyGenreCap(applyContextualScoring(fallbackRecs, survey), 4).slice(0, 20);
+    return { recommendations: fallbackWithContext, cached: false };
   }
 });
 

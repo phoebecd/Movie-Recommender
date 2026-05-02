@@ -34,23 +34,23 @@ MODELS_DIR = "." # Save in ml root for simplicity
 
 async def get_tmdb_metadata(tmdb_id):
     """Fetch poster, backdrop and watch providers from TMDB"""
-    headers = {"Authorization": f"Bearer {TMDB_API_KEY}", "accept": "application/json"}
+    params = {"api_key": TMDB_API_KEY}
     async with httpx.AsyncClient() as client:
         try:
-            # 1. Get images
-            res = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}", headers=headers)
+            res = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}", params=params)
+            res.raise_for_status()
             data = res.json()
             poster_url = f"https://image.tmdb.org/t/p/w500{data.get('poster_path')}" if data.get('poster_path') else ""
             backdrop_url = f"https://image.tmdb.org/t/p/w1280{data.get('backdrop_path')}" if data.get('backdrop_path') else ""
-            
-            # 2. Get providers
-            res_p = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}/watch/providers", headers=headers)
+
+            res_p = await client.get(f"https://api.themoviedb.org/3/movie/{tmdb_id}/watch/providers", params=params)
+            res_p.raise_for_status()
             providers_data = res_p.json()
             us_providers = providers_data.get('results', {}).get('US', {}).get('flatrate', [])
             platforms = [p['provider_name'] for p in us_providers]
-            
+
             return poster_url, backdrop_url, platforms
-        except Exception as e:
+        except Exception:
             return "", "", []
 
 def parse_genres(genre_str):
@@ -72,7 +72,7 @@ async def seed():
         return
         
     df = pd.read_csv(csv_path)
-    df = df.head(500) # Seeding top 500 for demo speed
+    df = df.head(2000)
 
     print(f"Generating TF-IDF vectors for {len(df)} movies...")
     # Pre-process text for TF-IDF
@@ -123,9 +123,9 @@ async def seed():
         if idx % 50 == 0:
             print(f"Processed {idx} movies...")
 
-    # KMeans Clustering on the same vectors
+    # KMeans Clustering on the same vectors — more movies needs more clusters
     print("Training taste clusters...")
-    kmeans = KMeans(n_clusters=12, random_state=42, n_init='auto')
+    kmeans = KMeans(n_clusters=30, random_state=42, n_init='auto')
     kmeans.fit(movie_vectors)
     
     # Save artifacts

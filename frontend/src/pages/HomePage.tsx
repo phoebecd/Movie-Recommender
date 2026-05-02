@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
+import { collection, query, orderBy, limit, getDocs, doc, getDoc } from 'firebase/firestore'
 import { useQuery } from '@tanstack/react-query'
 import { db } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
@@ -18,15 +18,24 @@ async function fetchTopMovies(): Promise<Movie[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Movie))
 }
 
-// Fetch user's watched list
+// Fetch user's watched list with movie data
 async function fetchWatched(uid: string): Promise<Array<{ entry: WatchedEntry; movie?: Movie }>> {
   const q = query(
     collection(db, 'users', uid, 'watched'),
     orderBy('dateWatched', 'desc'),
-    limit(20)
+    limit(10)
   )
   const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ entry: d.data() as WatchedEntry }))
+  const entries = snap.docs.map((d) => d.data() as WatchedEntry)
+
+  const movieSnaps = await Promise.all(
+    entries.map((e) => getDoc(doc(db, 'movies', e.movieId)))
+  )
+
+  return entries.map((entry, i) => ({
+    entry,
+    movie: movieSnaps[i].exists() ? ({ id: movieSnaps[i].id, ...movieSnaps[i].data() } as Movie) : undefined,
+  }))
 }
 
 const stagger = {
@@ -139,15 +148,17 @@ export default function HomePage() {
           <section>
             <h2 className="section-header mb-4">Your Watch History</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {watched.slice(0, 10).map(({ entry }) => (
-                <MovieCard
-                  key={entry.movieId}
-                  movie={{ id: entry.movieId, title: entry.movieId } as Movie}
-                  variant="watched"
-                  userRating={entry.rating}
-                  dateWatched={entry.dateWatched?.toDate?.()}
-                />
-              ))}
+              {watched.map(({ entry, movie }) =>
+                movie ? (
+                  <MovieCard
+                    key={entry.movieId}
+                    movie={movie}
+                    variant="watched"
+                    userRating={entry.rating}
+                    dateWatched={entry.dateWatched?.toDate?.()}
+                  />
+                ) : null
+              )}
             </div>
           </section>
         )}

@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { db } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
-import { getMovieCredits, getMovieVideos, getWatchProviders } from '../lib/tmdb'
+import { getMovieCredits, getMovieVideos, getWatchProviders, getMovieReviews } from '../lib/tmdb'
 import { logWatchedMovie } from '../lib/functions'
 import { toast } from '../store/toastStore'
 import { Navbar } from '../components/Navbar'
@@ -13,7 +13,7 @@ import { StarRating } from '../components/StarRating'
 import { ChipSelect } from '../components/ChipSelect'
 import { SkeletonCard } from '../components/SkeletonCard'
 import { TMDB_BACKDROP_URL, TMDB_PROFILE_URL } from '../types'
-import type { Movie, WatchedEntry, TMDBCastMember } from '../types'
+import type { Movie, WatchedEntry, TMDBCastMember, TMDBReview } from '../types'
 
 const MOOD_CHIPS = ['Laugh', 'Cry', 'Think', 'Escape', 'Be Scared', 'Be Inspired', 'Feel Something']
 
@@ -101,6 +101,26 @@ export default function MovieDetailPage() {
     enabled: !!movie?.tmdb_id,
     staleTime: 1000 * 60 * 60,
   })
+
+  // ─── TMDB reviews ────────────────────────────────────────────────────────────
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['reviews', movie?.tmdb_id],
+    queryFn: () => getMovieReviews(movie!.tmdb_id),
+    enabled: !!movie?.tmdb_id,
+    staleTime: 1000 * 60 * 60,
+  })
+
+  // Pick the most substantive review: prefer rated ones, sorted by rating then length
+  const bestReview: TMDBReview | null = (() => {
+    if (!reviews.length) return null
+    const withRating = reviews.filter((r) => r.author_details.rating != null)
+    const pool = withRating.length > 0 ? withRating : reviews
+    const sorted = [...pool].sort((a, b) => {
+      const rd = (b.author_details.rating ?? 0) - (a.author_details.rating ?? 0)
+      return rd !== 0 ? rd : b.content.length - a.content.length
+    })
+    return sorted.find((r) => r.content.length >= 80) ?? sorted[0] ?? null
+  })()
 
   const handleMarkWatched = async () => {
     if (!user || !movieId || watchedRating === 0) {
@@ -196,14 +216,41 @@ export default function MovieDetailPage() {
             {/* Description */}
             <p className="text-zinc-300 leading-relaxed">{movie.description}</p>
 
-            {/* MovieMatch's Take */}
-            {movie.one_sentence_summary && (
+            {/* MovieMatch's Take — live TMDB review excerpt */}
+            {(bestReview || movie.one_sentence_summary) && (
               <div className="card p-4 bg-violet-900/10 border-violet-500/20">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-violet-400 text-sm">✦</span>
                   <span className="text-xs font-semibold text-violet-400 uppercase tracking-wide">MovieMatch's Take</span>
                 </div>
-                <p className="text-zinc-300 italic leading-relaxed">"{movie.one_sentence_summary}"</p>
+                {bestReview ? (
+                  <>
+                    <p className="text-zinc-300 italic leading-relaxed">
+                      "{bestReview.content.length > 300
+                        ? bestReview.content.slice(0, 300).trimEnd() + '…'
+                        : bestReview.content}"
+                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-xs text-zinc-500">
+                        — {bestReview.author_details.name || bestReview.author}
+                        {bestReview.author_details.rating != null && (
+                          <span className="ml-1.5 text-yellow-400">★ {bestReview.author_details.rating}/10</span>
+                        )}
+                      </span>
+                      <a
+                        href={bestReview.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto text-xs text-violet-400 hover:text-violet-300"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        via TMDB ↗
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-zinc-300 italic leading-relaxed">"{movie.one_sentence_summary}"</p>
+                )}
               </div>
             )}
 

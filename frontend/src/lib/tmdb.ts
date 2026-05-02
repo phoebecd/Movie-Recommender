@@ -4,6 +4,7 @@ import type {
   TMDBCredits,
   TMDBVideo,
   TMDBWatchProviders,
+  TMDBReview,
 } from '../types'
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
@@ -47,6 +48,17 @@ export async function getMovieVideos(tmdbId: number): Promise<TMDBVideo[]> {
 export async function getWatchProviders(tmdbId: number): Promise<TMDBWatchProviders | null> {
   const res = await tmdbClient.get(`/movie/${tmdbId}/watch/providers`)
   return res.data.results?.US ?? null
+}
+
+export async function getMoviePosterUrl(tmdbId: number): Promise<string | null> {
+  const res = await tmdbClient.get(`/movie/${tmdbId}`)
+  const path: string | null = res.data.poster_path ?? null
+  return path ? `https://image.tmdb.org/t/p/w500${path}` : null
+}
+
+export async function getMovieReviews(tmdbId: number): Promise<TMDBReview[]> {
+  const res = await tmdbClient.get(`/movie/${tmdbId}/reviews`)
+  return res.data.results ?? []
 }
 
 export default tmdbClient

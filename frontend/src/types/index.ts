@@ -195,6 +195,20 @@ export interface TMDBWatchProviders {
   link?: string
 }
 
+export interface TMDBReview {
+  id: string
+  author: string
+  author_details: {
+    name: string
+    username: string
+    avatar_path: string | null
+    rating: number | null
+  }
+  content: string
+  created_at: string
+  url: string
+}
+
 // ─── Misc ─────────────────────────────────────────────────────────────────────
 
 export interface UserStub {
