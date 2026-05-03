@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { doc, setDoc, Timestamp, getDoc } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
+import { useQuery } from '@tanstack/react-query'
 import { db } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { useSurveyStore } from '../store/surveyStore'
@@ -29,8 +30,25 @@ export function SurveyBar({ onSubmit, excludeMovieIds = [] }: Props) {
   const [mood, setMood] = useState<string[]>([])
   const [runtime, setRuntime] = useState<string[]>([])
   const [watchingWith, setWatchingWith] = useState<string[]>([])
+  const [selectedFriendUids, setSelectedFriendUids] = useState<string[]>([])
   const [energy, setEnergy] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+
+  // Fetch friends for blending
+  const { data: friends = [] } = useQuery({
+    queryKey: ['friends', user?.uid],
+    queryFn: async () => {
+      const snap = await getDocs(collection(db, 'users', user!.uid, 'friends'))
+      const docs = snap.docs.map(d => d.data() as any)
+      const accepted = docs.filter(f => f.status === 'accepted')
+      const enriched = await Promise.all(accepted.map(async (f) => {
+        const uSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', f.friendUid)))
+        return { ...f, userDetails: uSnap.docs[0]?.data() }
+      }))
+      return enriched
+    },
+    enabled: !!user && watchingWith[0] === 'Friends'
+  })
 
   const handleSubmit = async () => {
     if (!user) return
@@ -44,6 +62,7 @@ export function SurveyBar({ onSubmit, excludeMovieIds = [] }: Props) {
       runtime: runtime[0],
       watchingWith: watchingWith[0],
       energyLevel: energy[0],
+      selectedFriendUids: watchingWith[0] === 'Friends' ? selectedFriendUids : []
     }
 
     setSurvey(survey)
@@ -51,11 +70,22 @@ export function SurveyBar({ onSubmit, excludeMovieIds = [] }: Props) {
     setLoading(true)
 
     try {
-      const result = await getRecommendations({ survey, excludeMovieIds })
-      setRecommendations(result.data.recommendations)
+      let result;
+      if (survey.selectedFriendUids?.length) {
+        result = await getBlendedRecommendations({ 
+          friendUids: survey.selectedFriendUids, 
+          survey, 
+          excludeMovieIds 
+        })
+      } else {
+        result = await getRecommendations({ survey, excludeMovieIds })
+      }
+      
+      setRecommendations(result.data.recommendations as any)
       setLastFetched(new Date())
       onSubmit?.()
     } catch (err) {
+      console.error(err)
       toast.error('Could not fetch recommendations — try again')
     } finally {
       setSubmitting(false)
@@ -83,6 +113,23 @@ export function SurveyBar({ onSubmit, excludeMovieIds = [] }: Props) {
           <p className="label">Watching with</p>
           <ChipSelect options={WATCHING} selected={watchingWith} onChange={setWatchingWith} multi={false} />
         </div>
+        {watchingWith[0] === 'Friends' && friends.length > 0 && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+            <p className="label">Select Friends to Blend</p>
+            <ChipSelect 
+              options={friends.map(f => f.userDetails?.username || 'Unknown')} 
+              selected={selectedFriendUids.map(uid => friends.find(f => f.friendUid === uid)?.userDetails?.username || '')} 
+              onChange={(names) => {
+                const uids = names.map(name => friends.find(f => f.userDetails?.username === name)?.friendUid).filter(Boolean) as string[]
+                setSelectedFriendUids(uids)
+              }} 
+              multi={true} 
+            />
+          </motion.div>
+        )}
+        {watchingWith[0] === 'Friends' && friends.length === 0 && (
+          <p className="text-[10px] text-zinc-600 italic">Add friends in the Friends tab to use the Blend feature!</p>
+        )}
         <div>
           <p className="label">Energy level</p>
           <ChipSelect options={ENERGY} selected={energy} onChange={setEnergy} multi={false} />

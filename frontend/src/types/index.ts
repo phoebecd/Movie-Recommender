@@ -53,7 +53,7 @@ export interface UserProfile {
   watchingMotivations: string[]
   avoidanceTags: string[]
   contentWarningFilters: string[]
-  updatedAt: Timestamp
+  updatedAt: Timestamp | string
 }
 
 export interface UserStats {

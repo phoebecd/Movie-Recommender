@@ -25,8 +25,10 @@ def compute_user_vector(profile, favorite_movie_vectors, last_watched_vectors):
         weights.append(0.4)
         
     # Weighted average
-    total_weight = sum(weights)
-    user_vector = np.average(vecs, axis=0, weights=weights) if weights else np.zeros(384)
+    if not vecs:
+        return {"vector": [0.0] * 384, "clusterLabel": 0}
+        
+    user_vector = np.average(vecs, axis=0, weights=weights)
     
     # Normalize
     norm = np.linalg.norm(user_vector)

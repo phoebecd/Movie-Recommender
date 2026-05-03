@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { doc, updateDoc, Timestamp } from 'firebase/firestore'
+import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { updateSurvey, computeUserVector } from '../lib/functions'
 import { toast } from '../store/toastStore'
 import { ChipSelect } from '../components/ChipSelect'
 import { MovieSearchCombobox } from '../components/MovieSearchCombobox'
-import type { TMDBSearchResult, OnboardingSurvey } from '../types'
+import type { TMDBSearchResult } from '../types'
 
 const STEPS = ['Taste in Film', 'People', 'How You Watch', 'Vibe']
 
@@ -102,23 +102,6 @@ export default function OnboardingPage() {
     if (!user) return
     setSubmitting(true)
 
-    const profile: OnboardingSurvey = {
-      favoriteMovies: favMovies,
-      lastWatched,
-      favoriteGenres: genres,
-      favoriteDecades: decades,
-      favoriteActors: actors,
-      favoriteDirectors: directors,
-      platforms,
-      watchingWith,
-      watchFrequency: frequency[0] ?? '',
-      preferredRuntime: runtime[0] ?? '',
-      subtitlePreference: subtitles[0] ?? '',
-      watchingMotivations: motivations,
-      avoidanceTags,
-      contentWarningFilters: contentWarnings,
-    }
-
     try {
       await updateSurvey({
         profile: {
@@ -136,7 +119,7 @@ export default function OnboardingPage() {
           watchingMotivations: motivations,
           avoidanceTags,
           contentWarningFilters: contentWarnings,
-          updatedAt: Timestamp.now(),
+          updatedAt: new Date().toISOString(),
         },
       })
       await computeUserVector({ 

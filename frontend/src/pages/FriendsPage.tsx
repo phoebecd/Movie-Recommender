@@ -27,18 +27,29 @@ export default function FriendsPage() {
   const [searching, setSearching] = useState(false)
   const [sendingTo, setSendingTo] = useState<string | null>(null)
 
-  const { data: friends = [], isLoading: friendsLoading } = useQuery({
+  const { data: friendsData = { accepted: [], pending: [] }, isLoading: friendsLoading } = useQuery({
     queryKey: ['friends', user?.uid],
     queryFn: async () => {
       const snap = await getDocs(collection(db, 'users', user!.uid, 'friends'))
-      return snap.docs.map((d) => d.data() as FriendDoc)
+      const docs = snap.docs.map((d) => d.data() as FriendDoc)
+      
+      const enriched = await Promise.all(docs.map(async (f) => {
+        const uSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', f.friendUid)))
+        const userData = uSnap.docs[0]?.data() as UserStub | undefined
+        return { ...f, userDetails: userData }
+      }))
+
+      return {
+        accepted: enriched.filter((f) => f.status === 'accepted'),
+        pending: enriched.filter((f) => f.status === 'pending' && f.initiatedBy !== user?.uid)
+      }
     },
     enabled: !!user,
-    staleTime: 0,
+    staleTime: 30000,
   })
 
-  const accepted = friends.filter((f) => f.status === 'accepted')
-  const pending = friends.filter((f) => f.status === 'pending' && f.initiatedBy !== user?.uid)
+  const { accepted, pending } = friendsData;
+  const allFriends = [...accepted, ...pending];
 
   useEffect(() => {
     if (!debouncedQuery.trim()) { setSearchResults([]); return }
@@ -78,8 +89,8 @@ export default function FriendsPage() {
     } catch { toast.error('Failed to decline') }
   }
 
-  const sentUids = new Set(friends.filter((f) => f.initiatedBy === user?.uid).map((f) => f.friendUid))
-  const friendUids = new Set(accepted.map((f) => f.friendUid))
+  const sentUids = new Set(allFriends.filter((f: any) => f.initiatedBy === user?.uid).map((f: any) => f.friendUid))
+  const friendUids = new Set(accepted.map((f: any) => f.friendUid))
 
   return (
     <div className="min-h-screen bg-zinc-950">
@@ -130,10 +141,15 @@ export default function FriendsPage() {
           <section>
             <h2 className="section-header mb-4">Pending Requests <span className="text-violet-400">({pending.length})</span></h2>
             <div className="card divide-y divide-zinc-800">
-              {pending.map((req) => (
+              {pending.map((req: any) => (
                 <div key={req.friendUid} className="flex items-center gap-3 p-3">
-                  <div className="w-9 h-9 rounded-full bg-zinc-700 flex items-center justify-center text-zinc-400 text-sm flex-shrink-0">?</div>
-                  <div className="flex-1"><p className="text-sm text-zinc-300">{req.friendUid}</p><p className="text-xs text-zinc-500">Wants to be friends</p></div>
+                  <div className="w-9 h-9 rounded-full bg-violet-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 overflow-hidden">
+                    {(req.userDetails as any)?.photoUrl ? <img src={req.userDetails.photoUrl} alt="" className="w-full h-full object-cover" /> : (req.userDetails?.displayName?.[0] || '?')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-200 truncate">{req.userDetails?.displayName || 'Unknown User'}</p>
+                    <p className="text-xs text-zinc-500">@{req.userDetails?.username || req.friendUid.slice(0, 8)}</p>
+                  </div>
                   <button onClick={() => handleAccept(req.friendUid)} className="btn-primary text-xs px-3 py-1.5">Accept</button>
                   <button onClick={() => handleDecline(req.friendUid)} className="btn-secondary text-xs px-3 py-1.5">Decline</button>
                 </div>
@@ -151,13 +167,16 @@ export default function FriendsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {accepted.map((f) => (
+              {accepted.map((f: any) => (
                 <div key={f.friendUid} className="card p-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-violet-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                    {f.friendUid[0].toUpperCase()}
+                  <div className="w-10 h-10 rounded-full bg-violet-600 flex items-center justify-center text-white font-semibold flex-shrink-0 overflow-hidden">
+                    {(f.userDetails as any)?.photoUrl ? <img src={f.userDetails.photoUrl} alt="" className="w-full h-full object-cover" /> : (f.userDetails?.displayName?.[0] || f.friendUid[0].toUpperCase())}
                   </div>
-                  <div><p className="text-sm font-medium text-zinc-200">@{f.friendUid}</p>
-                    <p className="text-xs text-zinc-500">Friends since {f.createdAt?.toDate?.()?.toLocaleDateString()}</p></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-200 truncate">{f.userDetails?.displayName || 'Unknown User'}</p>
+                    <p className="text-xs text-zinc-500">@{f.userDetails?.username || f.friendUid.slice(0, 8)}</p>
+                    <p className="text-[10px] text-zinc-600 mt-1">Friends since {f.createdAt?.toDate?.()?.toLocaleDateString()}</p>
+                  </div>
                 </div>
               ))}
             </div>

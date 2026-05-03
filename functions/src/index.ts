@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 import axios from 'axios';
 
 admin.initializeApp();
@@ -201,7 +201,11 @@ export const computeUserVector = onCall(async (request) => {
     }, { merge: true });
 
     return { vector, clusterLabel };
-  } catch (error) {
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      console.error('FastAPI UserVector Error:', error.response?.data || error.message);
+      throw new HttpsError('internal', `ML service error: ${JSON.stringify(error.response?.data || error.message)}`);
+    }
     console.error('FastAPI UserVector Error:', error);
     throw new HttpsError('internal', 'ML service error');
   }
@@ -263,6 +267,12 @@ export const logWatchedMovie = onCall(async (request) => {
 export const updateSurvey = onCall(async (request) => {
   const uid = getAuthUid(request.auth);
   const { profile } = request.data;
+  
+  // Convert ISO string back to Timestamp for Firestore
+  if (profile && typeof profile.updatedAt === 'string') {
+    profile.updatedAt = Timestamp.fromDate(new Date(profile.updatedAt));
+  }
+
   await db.collection('users').doc(uid).collection('profile').doc('data').set(profile, { merge: true });
   return { success: true };
 });
