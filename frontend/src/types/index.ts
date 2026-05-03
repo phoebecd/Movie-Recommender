@@ -68,7 +68,7 @@ export interface UserStats {
 
 export interface WatchedEntry {
   movieId: string
-  rating: number                // 1–5
+  rating: number                // 1–10
   dateWatched: Timestamp
   moodWhenWatched: string[]
   personalNote: string

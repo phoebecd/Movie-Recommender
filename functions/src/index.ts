@@ -37,13 +37,35 @@ const RUNTIME_RANGE: Record<string, [number, number]> = {
 };
 
 // Cap results so no single genre dominates the list
-function applyGenreCap(recs: any[], maxPerGenre = 4): any[] {
+function applyGenreCap(recs: any[], maxPerGenre = 3): any[] {
   const counts: Record<string, number> = {};
   return recs.filter((rec) => {
     const primary: string = rec.movie?.genres?.[0];
     if (!primary) return true;
     counts[primary] = (counts[primary] ?? 0) + 1;
     return counts[primary] <= maxPerGenre;
+  });
+}
+
+// Cap results so no single decade dominates the list
+function applyEraCap(recs: any[], maxPerDecade = 5): any[] {
+  const counts: Record<number, number> = {};
+  return recs.filter((rec) => {
+    const year: number = rec.movie?.year;
+    if (!year) return true;
+    const decade = Math.floor(year / 10) * 10;
+    counts[decade] = (counts[decade] ?? 0) + 1;
+    return counts[decade] <= maxPerDecade;
+  });
+}
+
+// Limit English-language dominance to surface international films
+function applyLanguageCap(recs: any[], maxEnglish = 12): any[] {
+  let englishCount = 0;
+  return recs.filter((rec) => {
+    if (rec.movie?.language !== 'en') return true;
+    englishCount++;
+    return englishCount <= maxEnglish;
   });
 }
 
@@ -121,7 +143,7 @@ export const getRecommendations = onCall(async (request) => {
       userVector,
       contextualInputs: survey,
       excludeMovieIds: alreadySeenIds,
-      limit: 30, // fetch extra so contextual filtering has room to work
+      limit: 40, // fetch extra so contextual + diversity filtering has room to work
     }, {
       headers: { 'Authorization': `Bearer ${FASTAPI_SECRET}` },
       timeout: 10000,
@@ -134,7 +156,7 @@ export const getRecommendations = onCall(async (request) => {
     }));
 
     const enriched = recsWithMovies.filter((r) => r.movie !== null);
-    const finalRecs = applyGenreCap(applyContextualScoring(enriched, survey), 4).slice(0, 20);
+    const finalRecs = applyLanguageCap(applyEraCap(applyGenreCap(applyContextualScoring(enriched, survey)))).slice(0, 20);
 
     await cacheRef.set({ survey, excludeMovieIds, recommendations: finalRecs, timestamp: FieldValue.serverTimestamp() });
     return { recommendations: finalRecs, cached: false };
@@ -157,7 +179,7 @@ export const getRecommendations = onCall(async (request) => {
         movie: { id: d.id, ...d.data() },
       }));
 
-    const fallbackWithContext = applyGenreCap(applyContextualScoring(fallbackRecs, survey), 4).slice(0, 20);
+    const fallbackWithContext = applyLanguageCap(applyEraCap(applyGenreCap(applyContextualScoring(fallbackRecs, survey)))).slice(0, 20);
     return { recommendations: fallbackWithContext, cached: false };
   }
 });

@@ -72,7 +72,6 @@ async def seed():
         return
         
     df = pd.read_csv(csv_path)
-    df = df.head(2000)
 
     print(f"Generating TF-IDF vectors for {len(df)} movies...")
     # Pre-process text for TF-IDF
@@ -123,9 +122,27 @@ async def seed():
         if idx % 50 == 0:
             print(f"Processed {idx} movies...")
 
+    # Save movie metadata for era/language diversity filtering in recommender
+    metadata_dict = {}
+    for _, row in df.iterrows():
+        tmdb_id = str(int(row['id']))
+        year = 0
+        try:
+            if not pd.isna(row.get('release_date', float('nan'))):
+                year = int(str(row['release_date']).split('-')[0])
+        except Exception:
+            pass
+        metadata_dict[tmdb_id] = {
+            "year": year,
+            "decade": (year // 10) * 10 if year else 0,
+            "language": str(row.get('original_language', 'en')),
+        }
+    with open(os.path.join(MODELS_DIR, "movie_metadata.json"), "w") as f:
+        json.dump(metadata_dict, f)
+
     # KMeans Clustering on the same vectors — more movies needs more clusters
     print("Training taste clusters...")
-    kmeans = KMeans(n_clusters=30, random_state=42, n_init='auto')
+    kmeans = KMeans(n_clusters=50, random_state=42, n_init='auto')
     kmeans.fit(movie_vectors)
     
     # Save artifacts

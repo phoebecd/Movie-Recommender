@@ -124,7 +124,7 @@ export default function MovieDetailPage() {
 
   const handleMarkWatched = async () => {
     if (!user || !movieId || watchedRating === 0) {
-      toast.warning('Please select a star rating')
+      toast.warning('Please select a rating (1–10)')
       return
     }
     setSubmittingWatch(true)
@@ -326,7 +326,12 @@ export default function MovieDetailPage() {
             {watched ? (
               <div className="card p-4 space-y-3">
                 <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Your Review</p>
-                <StarRating value={watched.rating} readOnly />
+                {watched.rating > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-yellow-400">{watched.rating}</span>
+                    <span className="text-sm text-zinc-500">/10</span>
+                  </div>
+                )}
                 {watched.moodWhenWatched?.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {watched.moodWhenWatched.map((m) => (
@@ -361,7 +366,7 @@ export default function MovieDetailPage() {
                     >
                       <div className="card p-4 mt-3 space-y-3">
                         <div>
-                          <label className="label">Your rating</label>
+                          <label className="label">Your rating (out of 10)</label>
                           <StarRating value={watchedRating} onChange={setWatchedRating} size="lg" />
                         </div>
                         <div>
