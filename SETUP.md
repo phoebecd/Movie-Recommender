@@ -53,11 +53,32 @@ pip install -r requirements.txt
 
 ---
 
-## 4. Running the Application
+## 4. Initial Data Seeding
+Before using the app, you must populate the local Firestore emulator with movie data and train the lightweight ML model.
+
+**In Terminal 1, run Firebase Emulators**
+
+Starting the local Auth, Firestore, and Functions environment.
+```bash
+firebase emulators:start --project moviematch-3f5f8
+```
+
+**In Terminal 2 (with emulators running):**
+```bash
+cd ml
+export USE_EMULATORS=true
+export GCLOUD_PROJECT=moviematch-3f5f8
+python seed_firestore.py
+```
+*Note: This will process the `tmdb_5000_movies.csv` and generate `.pkl` files for the recommender.*
+
+---
+
+## 5. Running the Application
 
 You will need **three** terminal windows open:
 
-### Terminal 1: Firebase Emulators
+### Terminal 1: Firebase Emulators (should already be running from previous step)
 Starting the local Auth, Firestore, and Functions environment.
 ```bash
 firebase emulators:start --project moviematch-3f5f8
@@ -77,19 +98,6 @@ The Vite dev server for the React application.
 cd frontend
 npm run dev
 ```
-
----
-
-## 5. Initial Data Seeding
-Before using the app, you must populate the local Firestore emulator with movie data and train the lightweight ML model.
-
-**In Terminal 2 (with emulators running):**
-```bash
-cd ml
-export USE_EMULATORS=true
-python seed_firestore.py
-```
-*Note: This will process the `tmdb_5000_movies.csv` and generate `.pkl` files for the recommender.*
 
 ---
 
