@@ -249,14 +249,17 @@ export default function ProfilePage() {
             <div className="card p-8 text-center text-zinc-500">
               <p className="text-3xl mb-3">⚙</p>
               <p className="font-medium text-zinc-400">Preferences</p>
-              <p className="text-sm mt-1">Coming in the next build increment. Your current settings are from onboarding.</p>
+              <p className="text-sm mt-1">Review and update your taste profile and content filters.</p>
               {profile && (
-                <div className="mt-4 text-left max-w-sm mx-auto text-xs text-zinc-600 space-y-1">
+                <div className="mt-4 text-left max-w-sm mx-auto text-xs text-zinc-600 space-y-1 mb-6">
                   <p>Genres: {profile.favoriteGenres?.join(', ') || 'none'}</p>
                   <p>Platforms: {profile.platforms?.join(', ') || 'none'}</p>
                   <p>Runtime pref: {profile.preferredRuntime || 'not set'}</p>
                 </div>
               )}
+              <button onClick={() => navigate('/onboarding')} className="btn-secondary px-6">
+                Edit Preferences
+              </button>
             </div>
           )}
         </motion.div>

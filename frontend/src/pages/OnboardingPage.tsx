@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuthStore } from '../store/authStore'
 import { updateSurvey, computeUserVector } from '../lib/functions'
 import { toast } from '../store/toastStore'
 import { ChipSelect } from '../components/ChipSelect'
 import { MovieSearchCombobox } from '../components/MovieSearchCombobox'
+import { getMovieDetails } from '../lib/tmdb'
 import type { TMDBSearchResult } from '../types'
 
 const STEPS = ['Taste in Film', 'People', 'How You Watch', 'Vibe']
@@ -61,9 +62,10 @@ function TagInput({ value, onChange, max, placeholder }: { value: string[]; onCh
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, firestoreUser } = useAuthStore()
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [loadingInitial, setLoadingInitial] = useState(false)
 
   // Step 1
   const [favMovies, setFavMovies] = useState<TMDBSearchResult[]>([])
@@ -86,6 +88,41 @@ export default function OnboardingPage() {
   const [motivations, setMotivations] = useState<string[]>([])
   const [avoidanceTags, setAvoidanceTags] = useState<string[]>([])
   const [contentWarnings, setContentWarnings] = useState<string[]>([])
+
+  useEffect(() => {
+    async function loadExisting() {
+      if (!user || firestoreUser?.firstLogin) return
+      setLoadingInitial(true)
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid, 'profile', 'data'))
+        if (!snap.exists()) return
+        const p = snap.data()
+        
+        const fMovies = await Promise.all((p.favoriteMovies || []).map((id: string) => getMovieDetails(id)))
+        const lMovies = await Promise.all((p.lastWatched || []).map((id: string) => getMovieDetails(id)))
+
+        setFavMovies(fMovies.filter(Boolean) as TMDBSearchResult[])
+        setLastWatched(lMovies.filter(Boolean) as TMDBSearchResult[])
+        setGenres(p.favoriteGenres || [])
+        setDecades(p.favoriteDecades || [])
+        setActors(p.favoriteActors || [])
+        setDirectors(p.favoriteDirectors || [])
+        setPlatforms(p.platforms || [])
+        setWatchingWith(p.watchingWith || [])
+        if (p.watchFrequency) setFrequency([p.watchFrequency])
+        if (p.preferredRuntime) setRuntime([p.preferredRuntime])
+        if (p.subtitlePreference) setSubtitles([p.subtitlePreference])
+        setMotivations(p.watchingMotivations || [])
+        setAvoidanceTags(p.avoidanceTags || [])
+        setContentWarnings(p.contentWarningFilters || [])
+      } catch (err) {
+        console.error('Failed to load existing preferences', err)
+      } finally {
+        setLoadingInitial(false)
+      }
+    }
+    loadExisting()
+  }, [user, firestoreUser?.firstLogin])
 
   const removeMovie = (list: TMDBSearchResult[], setter: (v: TMDBSearchResult[]) => void, id: number) =>
     setter(list.filter((m) => m.id !== id))
@@ -231,6 +268,17 @@ export default function OnboardingPage() {
       </div>
     </div>,
   ]
+
+  if (loadingInitial) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-zinc-500 text-sm">Loading your preferences…</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">

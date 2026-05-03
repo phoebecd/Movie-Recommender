@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
@@ -43,17 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, firestoreUser, loading } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
     if (loading) return
     if (!user) {
-      navigate('/auth', { replace: true })
+      if (location.pathname !== '/auth') navigate('/auth', { replace: true })
       return
     }
-    if (firestoreUser?.firstLogin) {
+    if (firestoreUser?.firstLogin && location.pathname !== '/onboarding') {
       navigate('/onboarding', { replace: true })
     }
-  }, [user, firestoreUser, loading, navigate])
+  }, [user, firestoreUser, loading, navigate, location.pathname])
 
   if (loading) {
     return (

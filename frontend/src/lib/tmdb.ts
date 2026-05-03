@@ -35,6 +35,16 @@ export async function searchMovies(query: string, year?: number): Promise<TMDBSe
   return res.data.results ?? []
 }
 
+export async function getMovieDetails(tmdbId: string | number): Promise<TMDBSearchResult | null> {
+  try {
+    const res = await tmdbClient.get(`/movie/${tmdbId}`)
+    return res.data
+  } catch (err) {
+    console.error(`Failed to fetch movie details for ${tmdbId}`, err)
+    return null
+  }
+}
+
 export async function getMovieCredits(tmdbId: number): Promise<TMDBCredits> {
   const res = await tmdbClient.get(`/movie/${tmdbId}/credits`)
   return res.data
